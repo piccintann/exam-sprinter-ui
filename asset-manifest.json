@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/exam-sprinter-ui/static/css/main.989ba768.css",
-    "main.js": "/exam-sprinter-ui/static/js/main.c47767b8.js",
+    "main.css": "/exam-sprinter-ui/static/css/main.1bf89195.css",
+    "main.js": "/exam-sprinter-ui/static/js/main.8c8c7d1b.js",
     "static/js/453.600f6142.chunk.js": "/exam-sprinter-ui/static/js/453.600f6142.chunk.js",
     "index.html": "/exam-sprinter-ui/index.html",
-    "main.989ba768.css.map": "/exam-sprinter-ui/static/css/main.989ba768.css.map",
-    "main.c47767b8.js.map": "/exam-sprinter-ui/static/js/main.c47767b8.js.map",
+    "main.1bf89195.css.map": "/exam-sprinter-ui/static/css/main.1bf89195.css.map",
+    "main.8c8c7d1b.js.map": "/exam-sprinter-ui/static/js/main.8c8c7d1b.js.map",
     "453.600f6142.chunk.js.map": "/exam-sprinter-ui/static/js/453.600f6142.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.989ba768.css",
-    "static/js/main.c47767b8.js"
+    "static/css/main.1bf89195.css",
+    "static/js/main.8c8c7d1b.js"
   ]
 }
