@@ -45,6 +45,10 @@ const deleteConfig = (configId) => {
     return updated;
 };
 
+const deleteAllConfigs = () => {
+    persistConfigs([]);
+};
+
 function App() {
     const [currentView, setCurrentView] = useState('home');
     const [selectedExam, setSelectedExam] = useState(null);
@@ -55,6 +59,7 @@ function App() {
     const [currentMode, setCurrentMode] = useState(null);
     const [reportData, setReportData] = useState(null);
     const [sessionKey, setSessionKey] = useState(0);
+    const [configsVersion, setConfigsVersion] = useState(0);
 
     const handleExamSelect = (exam, data, examName, source, githubInfo) => {
         setSelectedExam(exam);
@@ -117,7 +122,8 @@ function App() {
                         examData={examData}
                         savedConfigs={loadSavedConfigs()}
                         onLaunchConfig={handleLaunchConfig}
-                        onDeleteConfig={deleteConfig}
+                        onDeleteConfig={(id) => { deleteConfig(id); setConfigsVersion(v => v + 1); }}
+                        onDeleteAllConfigs={() => { deleteAllConfigs(); setConfigsVersion(v => v + 1); }}
                     />
                 );
             case 'study':

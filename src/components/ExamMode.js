@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Question from './Question';
 import { saveReport } from '../utils/reportUtils';
+import { t } from '../utils/i18n';
 
 const ExamMode = ({ examData, settings, onComplete, onBack }) => {
     const [questions, setQuestions] = useState([]);
@@ -179,19 +180,19 @@ const ExamMode = ({ examData, settings, onComplete, onBack }) => {
     };
 
     if (questions.length === 0) {
-        return <div className="loading">⏰ Loading exam...</div>;
+        return <div className="loading">{t('loadingExam')}</div>;
     }
 
     return (
         <div className="exam-mode">
             <div className="exam-header">
-                <button onClick={onBack} className="back-btn">← Back to Home</button>
-                <h2>⏰ Exam Mode</h2>
+                <button onClick={onBack} className="back-btn">{t('backToHome')}</button>
+                <h2>{t('examModeTitle')}</h2>
                 <div className={getTimerClass()}>
-                    ⏱️ Time Left: {formatTime(timeLeft)}
+                    {t('timeLeft')} {formatTime(timeLeft)}
                 </div>
                 <button onClick={handleFinish} className="finish-btn" disabled={isFinished}>
-                    ✅ Finish Exam
+                    {t('finishExam')}
                 </button>
             </div>
 
@@ -210,7 +211,7 @@ const ExamMode = ({ examData, settings, onComplete, onBack }) => {
                     disabled={currentQuestionIndex === 0}
                     className="nav-btn"
                 >
-                    ← Previous
+                    {t('previousArrow')}
                 </button>
 
                 <div className="question-nav">
@@ -232,7 +233,7 @@ const ExamMode = ({ examData, settings, onComplete, onBack }) => {
                     disabled={currentQuestionIndex === questions.length - 1}
                     className="nav-btn"
                 >
-                    Next →
+                    {t('nextArrow')}
                 </button>
             </div>
 

@@ -1,0 +1,387 @@
+const translations = {
+    en: {
+        // Header
+        appTitle: '🧠 CramJam',
+
+        // Tabs
+        tabExams: '📋 Exams',
+        tabConfigs: '🔄 Configurations',
+        tabReports: '📈 Reports',
+        tabSettings: '⚙️ Settings',
+
+        // Sub-tabs
+        subAll: '📋 All',
+        subGitHub: 'GitHub',
+        subLocal: '💾 Local',
+
+        // Exams tab
+        searchExams: '🔍 Search exams...',
+        searchConfigs: '🔍 Search configurations...',
+        searchReports: '🔍 Search reports...',
+        foundExams: (count, term) => `Found ${count} exam${count !== 1 ? 's' : ''} matching "${term}"`,
+        showLabel: 'Show:',
+        perPage: 'per page',
+        showingExams: (from, to, total) => `${from}-${to} / ${total}`,
+        loadingExams: '🔍 Loading exams...',
+        noExamsFound: (term) => `🔍 No exams found matching "${term}"`,
+        tryDifferentSearch: 'Try a different search term or clear the search to see all exams.',
+        clearSearch: 'Clear Search',
+        noExamsAvailable: '📭 No exams available.',
+        uploadOrConnect: 'Upload a JSON file or connect to GitHub to get started.',
+        questions: 'questions',
+        storedLocally: '💽 Stored locally',
+        fromGitHub: '🔗 From GitHub Repository',
+        sizeLabel: '📦 Size:',
+
+        // Buttons
+        start: '▶️ Start',
+        launch: '▶️ Launch',
+        loading: '⏳ Loading...',
+        previous: 'Previous',
+        next: 'Next',
+        nextArrow: 'Next →',
+        previousArrow: '← Previous',
+        pageOf: (current, total) => `Page ${current} of ${total}`,
+        backToHome: '← Back to Home',
+        back: '← Back',
+        finishStudy: '✅ Finish Study',
+        finishExam: '✅ Finish Exam',
+        restartSession: '🔄 Restart Session',
+        showAnswer: '👁️ Show Answer',
+        hideAnswer: '🙈 Hide Answer',
+        deleteAll: '🗑️ Delete All',
+        delete: '🗑️',
+        viewDetails: '👁️ View Details',
+        disconnect: '🔓 Disconnect',
+        refreshExams: '🔄 Refresh Exams',
+        refreshLoading: '🔄 Loading...',
+        connect: '🔗 Connect',
+        testingConnection: '🔄 Testing Connection...',
+
+        // Study/Exam Mode
+        studyModeTitle: '📖 Study Mode',
+        examModeTitle: '⏰ Exam Mode',
+        timeLeft: '⏱️ Time Left:',
+        loadingQuestions: '📚 Loading questions...',
+        loadingExam: '⏰ Loading exam...',
+
+        // Mode Selection
+        selectMode: 'Select Mode',
+        studyMode: '📖 Study Mode',
+        studyModeDesc: 'Navigate freely, show answers, no time limit',
+        examMode: '⏰ Exam Mode',
+        examModeDesc: 'Timed simulation, no answers shown until end',
+        questionRange: '📝 Question Range',
+        useCustomRange: '🎯 Use custom question range',
+        startFromQuestion: 'Start from question:',
+        endAtQuestion: 'End at question:',
+        validRange: (min, max) => `Valid range: ${min} to ${max}`,
+        selectedRange: '📊 Selected Range:',
+        availableQuestions: '📈 Available Questions:',
+        rangeSize: '📏 Range Size:',
+        usingAll: (total) => `All questions (1 - ${total})`,
+        questionsToPractice: '🔢 Questions to Practice',
+        numberOfQuestions: 'Number of questions:',
+        maxAvailable: (n) => `Maximum available: ${n}`,
+        quickSelect: 'Quick select:',
+        allCount: (n) => `All (${n})`,
+        timeLimit: '⏰ Time Limit',
+        minutes: 'Minutes:',
+        recommended: (mins, perQ) => `Recommended: ${mins} minutes (${perQ} min/question)`,
+        questionOrder: '🔀 Question Order',
+        randomizeOrder: '🔀 Randomize question and answer order',
+        randomizeDesc: 'Questions will be presented in random order and answers within each question will also be shuffled',
+        configPreview: '📋 Configuration Preview:',
+        modeLabel: 'Mode:',
+        questionRangeLabel: 'Question Range:',
+        questionsToPracticeLabel: 'Questions to Practice:',
+        orderLabel: 'Order:',
+        random: '🔀 Random',
+        sequential: '📄 Sequential',
+        timeLimitLabel: 'Time Limit:',
+        startStudy: 'Start 📖 Study Session',
+        startExam: 'Start ⏰ Exam',
+        ofAvailable: 'of',
+        available: 'available',
+        minPerQuestion: 'min/question',
+
+        // Report
+        examReport: '📊 Exam Report',
+        finalScore: 'Final Score',
+        totalQuestions: '📝 Total Questions',
+        correct: '✅ Correct',
+        incorrect: '❌ Incorrect',
+        unanswered: '⏭️ Unanswered',
+        examDetails: '📋 Exam Details',
+        examLabel: '📚 Exam:',
+        modeDetailLabel: '🎯 Mode:',
+        timeSpent: '⏱️ Time Spent:',
+        timeLimitDetail: '⏰ Time Limit:',
+        dateLabel: '📅 Date:',
+        questionReview: '🔍 Question Review',
+        allFilter: (n) => `📊 All (${n})`,
+        correctFilter: (n) => `✅ Correct (${n})`,
+        incorrectFilter: (n) => `❌ Incorrect (${n})`,
+        unansweredFilter: (n) => `⏭️ Unanswered (${n})`,
+        questionsPerPage: 'Questions per page:',
+        showingFiltered: (count, type) => `Showing ${count} ${type} questions`,
+        yourAnswer: 'Your Answer:',
+        correctAnswer: 'Correct Answer:',
+        noAnswerSelected: 'No answer selected',
+        jumpToPage: 'Jump to page:',
+        reportDetails: '📊 Report Details',
+
+        // Question
+        questionOf: (current, total) => `Question ${current} of ${total}`,
+        topic: 'Topic',
+        questionNum: 'Question',
+        multipleAnswers: '✅ Multiple Answers',
+        selectYourAnswer: 'Select your answer',
+        selectYourAnswers: 'Select your answers',
+        correctAnswers: '✅ Correct Answer(s):',
+        highlyVotedAnswers: '👥 Highly Voted Community Answers:',
+        mostRecentAnswers: '🆕 Most Recent Community Answers:',
+        imageNotAvailable: '🖼️ Image not available',
+
+        // Configurations
+        noConfigs: '📭 No saved configurations yet.',
+        noConfigsHint: 'Start an exam session and your configuration will be saved automatically.',
+        deleteConfigConfirm: 'Delete this saved configuration?',
+        deleteAllConfigsConfirm: (count) => `Delete all ${count} saved configurations?`,
+        examNotFound: (name) => `Exam "${name}" not found. It may have been deleted.`,
+        errorLoadingExam: 'Error loading exam: ',
+
+        // Reports list
+        noReports: '📭 No previous reports found.',
+        noReportsHint: 'Complete an exam or study session to see your reports here.',
+        deleteReportConfirm: 'Are you sure you want to delete this report?',
+        deleteAllReportsConfirm: (count) => `Delete all ${count} reports? This cannot be undone.`,
+
+        // Settings
+        githubRepository: 'GitHub Repository',
+        uploadLocalExam: 'Import Exam Locally',
+        githubToken: 'GitHub Personal Access Token:',
+        githubTokenHelp: 'Create a token at: GitHub → Settings → Developer settings → Personal access tokens',
+        githubScope: 'Required scope: repo (for private repositories)',
+        githubTokenUsage: 'The token is used to access certification exam dumps',
+        githubDescription: 'Connect to your private GitHub repository to access certification exam dumps and images.',
+        setupInstructions: '📋 Setup Instructions:',
+        setupSteps: [
+            'Create a private GitHub repository',
+            'Create folders: data/dumps/ and md/images/[exam-name]/',
+            'Upload your JSON exam files to data/dumps/',
+            'Upload images to md/images/[exam-name]/',
+            'Create a Personal Access Token with repo scope',
+            'Paste the token above and connect'
+        ],
+        enterToken: 'Please enter a GitHub token',
+        repository: 'Repository:',
+        private: 'Private:',
+        size: 'Size:',
+        yes: 'Yes',
+        no: 'No',
+    },
+    it: {
+        // Header
+        appTitle: '🧠 CramJam',
+
+        // Tabs
+        tabExams: '📋 Esami',
+        tabConfigs: '🔄 Configurazioni',
+        tabReports: '📈 Report',
+        tabSettings: '⚙️ Impostazioni',
+
+        // Sub-tabs
+        subAll: '📋 Tutti',
+        subGitHub: 'GitHub',
+        subLocal: '💾 Locale',
+
+        // Exams tab
+        searchExams: '🔍 Cerca esami...',
+        searchConfigs: '🔍 Cerca configurazioni...',
+        searchReports: '🔍 Cerca report...',
+        foundExams: (count, term) => `Trovati ${count} esam${count !== 1 ? 'i' : 'e'} per "${term}"`,
+        showLabel: 'Mostra:',
+        perPage: 'per pagina',
+        showingExams: (from, to, total) => `${from}-${to} / ${total}`,
+        loadingExams: '🔍 Caricamento esami...',
+        noExamsFound: (term) => `🔍 Nessun esame trovato per "${term}"`,
+        tryDifferentSearch: 'Prova un termine diverso o cancella la ricerca per vedere tutti gli esami.',
+        clearSearch: 'Cancella Ricerca',
+        noExamsAvailable: '📭 Nessun esame disponibile.',
+        uploadOrConnect: 'Carica un file JSON o connettiti a GitHub per iniziare.',
+        questions: 'domande',
+        storedLocally: '💽 Salvato localmente',
+        fromGitHub: '🔗 Da Repository GitHub',
+        sizeLabel: '📦 Dimensione:',
+
+        // Buttons
+        start: '▶️ Avvia',
+        launch: '▶️ Avvia',
+        loading: '⏳ Caricamento...',
+        previous: 'Precedente',
+        next: 'Successivo',
+        nextArrow: 'Successivo →',
+        previousArrow: '← Precedente',
+        pageOf: (current, total) => `Pagina ${current} di ${total}`,
+        backToHome: '← Torna alla Home',
+        back: '← Indietro',
+        finishStudy: '✅ Termina Studio',
+        finishExam: '✅ Termina Esame',
+        restartSession: '🔄 Riavvia Sessione',
+        showAnswer: '👁️ Mostra Risposta',
+        hideAnswer: '🙈 Nascondi Risposta',
+        deleteAll: '🗑️ Elimina Tutto',
+        delete: '🗑️',
+        viewDetails: '👁️ Dettagli',
+        disconnect: '🔓 Disconnetti',
+        refreshExams: '🔄 Aggiorna Esami',
+        refreshLoading: '🔄 Caricamento...',
+        connect: '🔗 Connetti',
+        testingConnection: '🔄 Test Connessione...',
+
+        // Study/Exam Mode
+        studyModeTitle: '📖 Modalità Studio',
+        examModeTitle: '⏰ Modalità Esame',
+        timeLeft: '⏱️ Tempo Rimasto:',
+        loadingQuestions: '📚 Caricamento domande...',
+        loadingExam: '⏰ Caricamento esame...',
+
+        // Mode Selection
+        selectMode: 'Seleziona Modalità',
+        studyMode: '📖 Modalità Studio',
+        studyModeDesc: 'Naviga liberamente, mostra risposte, nessun limite di tempo',
+        examMode: '⏰ Modalità Esame',
+        examModeDesc: 'Simulazione a tempo, risposte mostrate solo alla fine',
+        questionRange: '📝 Range Domande',
+        useCustomRange: '🎯 Usa range personalizzato',
+        startFromQuestion: 'Inizia dalla domanda:',
+        endAtQuestion: 'Termina alla domanda:',
+        validRange: (min, max) => `Range valido: ${min} a ${max}`,
+        selectedRange: '📊 Range Selezionato:',
+        availableQuestions: '📈 Domande Disponibili:',
+        rangeSize: '📏 Dimensione Range:',
+        usingAll: (total) => `Tutte le domande (1 - ${total})`,
+        questionsToPractice: '🔢 Domande da Esercitare',
+        numberOfQuestions: 'Numero di domande:',
+        maxAvailable: (n) => `Massimo disponibile: ${n}`,
+        quickSelect: 'Selezione rapida:',
+        allCount: (n) => `Tutte (${n})`,
+        timeLimit: '⏰ Limite di Tempo',
+        minutes: 'Minuti:',
+        recommended: (mins, perQ) => `Consigliato: ${mins} minuti (${perQ} min/domanda)`,
+        questionOrder: '🔀 Ordine Domande',
+        randomizeOrder: '🔀 Randomizza ordine domande e risposte',
+        randomizeDesc: 'Le domande saranno presentate in ordine casuale e anche le risposte verranno mescolate',
+        configPreview: '📋 Anteprima Configurazione:',
+        modeLabel: 'Modalità:',
+        questionRangeLabel: 'Range Domande:',
+        questionsToPracticeLabel: 'Domande da Esercitare:',
+        orderLabel: 'Ordine:',
+        random: '🔀 Casuale',
+        sequential: '📄 Sequenziale',
+        timeLimitLabel: 'Limite di Tempo:',
+        startStudy: 'Avvia 📖 Sessione Studio',
+        startExam: 'Avvia ⏰ Esame',
+        ofAvailable: 'di',
+        available: 'disponibili',
+        minPerQuestion: 'min/domanda',
+
+        // Report
+        examReport: '📊 Report Esame',
+        finalScore: 'Punteggio Finale',
+        totalQuestions: '📝 Domande Totali',
+        correct: '✅ Corrette',
+        incorrect: '❌ Errate',
+        unanswered: '⏭️ Senza Risposta',
+        examDetails: '📋 Dettagli Esame',
+        examLabel: '📚 Esame:',
+        modeDetailLabel: '🎯 Modalità:',
+        timeSpent: '⏱️ Tempo Impiegato:',
+        timeLimitDetail: '⏰ Limite di Tempo:',
+        dateLabel: '📅 Data:',
+        questionReview: '🔍 Revisione Domande',
+        allFilter: (n) => `📊 Tutte (${n})`,
+        correctFilter: (n) => `✅ Corrette (${n})`,
+        incorrectFilter: (n) => `❌ Errate (${n})`,
+        unansweredFilter: (n) => `⏭️ Senza Risposta (${n})`,
+        questionsPerPage: 'Domande per pagina:',
+        showingFiltered: (count, type) => `Mostrando ${count} domande ${type}`,
+        yourAnswer: 'La tua Risposta:',
+        correctAnswer: 'Risposta Corretta:',
+        noAnswerSelected: 'Nessuna risposta selezionata',
+        jumpToPage: 'Vai alla pagina:',
+        reportDetails: '📊 Dettagli Report',
+
+        // Question
+        questionOf: (current, total) => `Domanda ${current} di ${total}`,
+        topic: 'Argomento',
+        questionNum: 'Domanda',
+        multipleAnswers: '✅ Risposte Multiple',
+        selectYourAnswer: 'Seleziona la tua risposta',
+        selectYourAnswers: 'Seleziona le tue risposte',
+        correctAnswers: '✅ Risposta/e Corretta/e:',
+        highlyVotedAnswers: '👥 Risposte Più Votate dalla Community:',
+        mostRecentAnswers: '🆕 Risposte Più Recenti dalla Community:',
+        imageNotAvailable: '🖼️ Immagine non disponibile',
+
+        // Configurations
+        noConfigs: '📭 Nessuna configurazione salvata.',
+        noConfigsHint: 'Avvia una sessione e la configurazione verrà salvata automaticamente.',
+        deleteConfigConfirm: 'Eliminare questa configurazione?',
+        deleteAllConfigsConfirm: (count) => `Eliminare tutte le ${count} configurazioni?`,
+        examNotFound: (name) => `Esame "${name}" non trovato. Potrebbe essere stato eliminato.`,
+        errorLoadingExam: 'Errore nel caricamento: ',
+
+        // Reports list
+        noReports: '📭 Nessun report trovato.',
+        noReportsHint: 'Completa un esame o una sessione di studio per vedere i report qui.',
+        deleteReportConfirm: 'Sei sicuro di voler eliminare questo report?',
+        deleteAllReportsConfirm: (count) => `Eliminare tutti i ${count} report? Non è reversibile.`,
+
+        // Settings
+        githubRepository: 'Repository GitHub',
+        uploadLocalExam: 'Importa Esame Localmente',
+        githubToken: 'Token di Accesso Personale GitHub:',
+        githubTokenHelp: 'Crea un token su: GitHub → Settings → Developer settings → Personal access tokens',
+        githubScope: 'Scope richiesto: repo (per repository privati)',
+        githubTokenUsage: 'Il token viene usato per accedere ai dump degli esami di certificazione',
+        githubDescription: 'Connettiti al tuo repository GitHub privato per accedere ai dump degli esami e alle immagini.',
+        setupInstructions: '📋 Istruzioni di Configurazione:',
+        setupSteps: [
+            'Crea un repository GitHub privato',
+            'Crea le cartelle: data/dumps/ e md/images/[nome-esame]/',
+            'Carica i file JSON degli esami in data/dumps/',
+            'Carica le immagini in md/images/[nome-esame]/',
+            'Crea un Personal Access Token con scope repo',
+            'Incolla il token qui sopra e connettiti'
+        ],
+        enterToken: 'Inserisci un token GitHub',
+        repository: 'Repository:',
+        private: 'Privato:',
+        size: 'Dimensione:',
+        yes: 'Sì',
+        no: 'No',
+    }
+};
+
+const LANG_KEY = 'examSprinterLang';
+
+export const getLanguage = () => {
+    return localStorage.getItem(LANG_KEY) || 'en';
+};
+
+export const setLanguage = (lang) => {
+    localStorage.setItem(LANG_KEY, lang);
+};
+
+export const t = (key, ...args) => {
+    const lang = getLanguage();
+    const value = translations[lang]?.[key] || translations.en[key] || key;
+    if (typeof value === 'function') {
+        return value(...args);
+    }
+    return value;
+};
+
+export default translations;

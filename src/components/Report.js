@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { t } from '../utils/i18n';
 
 const Report = ({ reportData, onBack, onRestart }) => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -94,10 +95,10 @@ const Report = ({ reportData, onBack, onRestart }) => {
     return (
         <div className="report-container">
             <div className="report-header">
-                <button onClick={onBack} className="back-btn">← Back to Home</button>
-                <h2>📊 Exam Report</h2>
+                <button onClick={onBack} className="back-btn">{t('backToHome')}</button>
+                <h2>{t('examReport')}</h2>
                 {onRestart && (
-                    <button onClick={onRestart} className="restart-btn">🔄 Restart Session</button>
+                    <button onClick={onRestart} className="restart-btn">{t('restartSession')}</button>
                 )}
             </div>
 

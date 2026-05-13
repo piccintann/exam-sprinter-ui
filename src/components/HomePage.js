@@ -4,8 +4,105 @@ import ReportsList from './ReportsList';
 import GitHubAuth from './GitHubAuth';
 import { loadAvailableExams, loadExamData, deleteExam, getExamInfo } from '../utils/fileUtils';
 import { loadExamFromGitHub, getGitHubToken } from '../utils/githubUtils';
+import { t, getLanguage, setLanguage } from '../utils/i18n';
 
-const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedConfigs, onLaunchConfig, onDeleteConfig }) => {
+const GitHubIcon = ({ size = 14 }) => (
+    <svg height={size} width={size} viewBox="0 0 16 16" style={{ verticalAlign: 'middle', fill: 'currentColor' }}>
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+    </svg>
+);
+
+// Categorizzazione degli esami basata sul nome e sulla cartella
+const EXAM_CATEGORIES = {
+    aws: {
+        label: 'AWS',
+        folders: ['amazon', 'aws'],
+        keywords: ['aws', 'amazon', 'saa', 'sap', 'dva', 'soa', 'clf', 'ans', 'dbs', 'mls', 'scs', 'dop', 'aip'],
+        color: '#FF9900',
+        logo: process.env.PUBLIC_URL + '/icons/aws.svg'
+    },
+    google: {
+        label: 'Google Cloud',
+        folders: ['google', 'gcp'],
+        keywords: ['google', 'gcp', 'gke', 'bigquery', 'cloud digital leader'],
+        color: '#4285F4',
+        logo: process.env.PUBLIC_URL + '/icons/google-cloud.svg'
+    },
+    azure: {
+        label: 'Microsoft Azure',
+        folders: ['microsoft', 'azure'],
+        keywords: ['azure', 'microsoft', 'az-', 'ms-'],
+        color: '#0078D4',
+        logo: process.env.PUBLIC_URL + '/icons/azure.svg'
+    },
+    spring: {
+        label: 'Spring',
+        folders: ['spring'],
+        keywords: ['spring', 'spring boot', 'spring cloud'],
+        color: '#6DB33F',
+        logo: process.env.PUBLIC_URL + '/icons/spring.svg'
+    },
+    oracle: {
+        label: 'Oracle',
+        folders: ['oracle'],
+        keywords: ['oracle', 'oci', 'java se', '1z0'],
+        color: '#F80000',
+        logo: process.env.PUBLIC_URL + '/icons/oracle.svg'
+    },
+    cisco: {
+        label: 'Cisco',
+        folders: ['cisco'],
+        keywords: ['cisco', 'ccna', 'ccnp', 'ccie'],
+        color: '#1BA0D7',
+        logo: process.env.PUBLIC_URL + '/icons/cisco.svg'
+    },
+    comptia: {
+        label: 'CompTIA',
+        folders: ['comptia'],
+        keywords: ['comptia', 'security+', 'network+', 'a+', 'pentest'],
+        color: '#C8202F',
+        logo: process.env.PUBLIC_URL + '/icons/comptia.svg'
+    },
+    kubernetes: {
+        label: 'Kubernetes',
+        folders: ['kubernetes', 'k8s'],
+        keywords: ['kubernetes', 'cka', 'ckad', 'cks', 'k8s'],
+        color: '#326CE5',
+        logo: process.env.PUBLIC_URL + '/icons/kubernetes.svg'
+    },
+    other: {
+        label: 'Other',
+        folders: ['other'],
+        keywords: [],
+        color: '#666',
+        logo: null
+    }
+};
+
+const getExamCategory = (examName, folder) => {
+    // Prima prova a categorizzare dalla cartella (più affidabile)
+    if (folder) {
+        const folderLower = folder.toLowerCase();
+        for (const [key, category] of Object.entries(EXAM_CATEGORIES)) {
+            if (key === 'other') continue;
+            if (category.folders.some(f => folderLower === f || folderLower.includes(f))) {
+                return key;
+            }
+        }
+    }
+
+    // Fallback: categorizza dal nome
+    const name = (examName || '').toLowerCase();
+    for (const [key, category] of Object.entries(EXAM_CATEGORIES)) {
+        if (key === 'other') continue;
+        if (category.keywords.some(kw => name.includes(kw))) {
+            return key;
+        }
+    }
+    return 'other';
+};
+
+const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedConfigs, onLaunchConfig, onDeleteConfig, onDeleteAllConfigs }) => {
     const [availableExams, setAvailableExams] = useState([]);
     const [githubExams, setGithubExams] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,10 +110,34 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
     const [showModeSelection, setShowModeSelection] = useState(false);
     const [githubAuthenticated, setGithubAuthenticated] = useState(false);
 
+    // Stato per la navigazione a tab
+    const [activeTab, setActiveTab] = useState('exams');
+
+    // Stato per tema e lingua
+    const [theme, setTheme] = useState(() => localStorage.getItem('examSprinterTheme') || 'light');
+    const [lang, setLang] = useState(getLanguage());
+
+    // Applica il tema al document
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('examSprinterTheme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'light' ? 'dracula' : 'light');
+    };
+
+    const handleLanguageChange = (newLang) => {
+        setLanguage(newLang);
+        setLang(newLang);
+    };
+
     // Stati per ricerca e paginazione
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [examsPerPage, setExamsPerPage] = useState(6);
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [sourceFilter, setSourceFilter] = useState('all');
 
     // Stati per sezioni richiudibili
     const [githubSectionExpanded, setGithubSectionExpanded] = useState(false);
@@ -24,7 +145,11 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
 
     useEffect(() => {
         loadExams();
-        setGithubAuthenticated(!!getGitHubToken());
+        const token = getGitHubToken();
+        setGithubAuthenticated(!!token);
+        if (token) {
+            loadGithubExams();
+        }
     }, []);
 
     const loadExams = async () => {
@@ -36,6 +161,20 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
             console.error('Error loading exams:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadGithubExams = async () => {
+        try {
+            const { loadExamsFromGitHub } = await import('../utils/githubUtils');
+            const exams = await loadExamsFromGitHub();
+            setGithubExams(exams.map(exam => ({
+                ...exam,
+                source: 'github',
+                displayName: exam.name.replace('.json', '').replace(/_/g, ' ').replace(/-/g, ' ')
+            })));
+        } catch (error) {
+            console.error('Error loading GitHub exams:', error);
         }
     };
 
@@ -114,18 +253,46 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
     const getAllExams = () => {
         const localExams = availableExams.map(exam => ({ ...exam, source: 'local' }));
         const githubExamsFormatted = githubExams.map(exam => ({ ...exam, source: 'github' }));
-        return [...localExams, ...githubExamsFormatted];
+        return [...localExams, ...githubExamsFormatted].map(exam => ({
+            ...exam,
+            category: getExamCategory(exam.displayName || exam.filename || exam.name, exam.folder)
+        }));
     };
 
     const getFilteredExams = () => {
-        const allExams = getAllExams();
-        if (!searchTerm) return allExams;
+        let allExams = getAllExams();
 
-        return allExams.filter(exam =>
-            exam.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            exam.filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            exam.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        // Filtro per sorgente
+        if (sourceFilter !== 'all') {
+            allExams = allExams.filter(exam => exam.source === sourceFilter);
+        }
+
+        // Filtro per categoria
+        if (categoryFilter !== 'all') {
+            allExams = allExams.filter(exam => exam.category === categoryFilter);
+        }
+
+        // Filtro per testo
+        if (searchTerm) {
+            allExams = allExams.filter(exam =>
+                exam.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                exam.filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                exam.name?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        return allExams;
+    };
+
+    const getAvailableCategories = () => {
+        const allExams = getAllExams();
+        const categories = new Set(allExams.map(e => e.category));
+        // Metti 'other' sempre alla fine
+        const sorted = Array.from(categories).filter(c => c !== 'other');
+        if (categories.has('other')) {
+            sorted.push('other');
+        }
+        return sorted;
     };
 
     const getPaginatedExams = () => {
@@ -141,7 +308,7 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
     // Reset alla pagina 1 quando cambia il filtro
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, examsPerPage]);
+    }, [searchTerm, examsPerPage, categoryFilter, sourceFilter]);
 
     if (showModeSelection && selectedExam && examData) {
         return <ModeSelection onModeSelect={handleModeSelect} examData={examData} onBack={() => setShowModeSelection(false)} />;
@@ -153,163 +320,254 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
 
     return (
         <div className="home-page">
-            <h1>📚 Exam Sprinter UI</h1>
-
-            {/* GitHub Authentication - Richiudibile */}
-            {/* GitHub Authentication - Richiudibile */}
-            <div className="collapsible-section">
-                <div
-                    className="collapsible-header"
-                    onClick={() => setGithubSectionExpanded(!githubSectionExpanded)}
+            {/* Top Bar - Theme & Language */}
+            <div className="top-bar">
+                <select
+                    className="lang-select"
+                    value={lang}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
                 >
-                    <h3>
-                        🐙 GitHub Repository Connection
-                        {githubAuthenticated && <span style={{ marginLeft: '8px', fontSize: '14px' }}>✅ Connected</span>}
-                    </h3>
-                    <span className={`collapse-icon ${githubSectionExpanded ? 'expanded' : ''}`}>
-                        ▼
-                    </span>
-                </div>
-                <div className={`collapsible-content ${githubSectionExpanded ? '' : 'collapsed'}`}>
-                    <GitHubAuth
-                        onAuthSuccess={handleGithubAuth}
-                        onExamsLoaded={handleGithubExamsLoaded}
-                    />
-                </div>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="it">🇮🇹 Italiano</option>
+                </select>
+                <button className="top-bar-btn" onClick={toggleTheme} title={theme === 'light' ? 'Dark mode' : 'Light mode'}>
+                    {theme === 'light' ? '🌙' : '☀️'}
+                </button>
             </div>
 
-            {/* Upload Section - Richiudibile */}
-            <div className="collapsible-section">
-                <div
-                    className="collapsible-header"
-                    onClick={() => setUploaderSectionExpanded(!uploaderSectionExpanded)}
+            <h1>
+                <img src={process.env.PUBLIC_URL + '/icons/cramjam-logo.svg'} alt="CramJam" className="app-logo" />
+                CramJam
+            </h1>
+
+            {/* Tab Navigation */}
+            <div className="nav-tabs">
+                <button
+                    className={`nav-tab ${activeTab === 'exams' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('exams')}
                 >
-                    <h3>📤 Upload New Exam</h3>
-                    <span className={`collapse-icon ${uploaderSectionExpanded ? 'expanded' : ''}`}>
-                        ▼
-                    </span>
-                </div>
-                <div className={`collapsible-content ${uploaderSectionExpanded ? '' : 'collapsed'}`}>
-                    <ExamUploader onFileUpload={handleFileUpload} />
-                </div>
-            </div>
-
-            {/* Sezione Esami con Ricerca e Paginazione */}
-            <div className="available-exams">
-                <h2>📋 Available Exams</h2>
-
-                {/* Barra di ricerca */}
-                <div className="exams-search">
-                    <input
-                        type="text"
-                        placeholder="🔍 Search exams..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
-                    {searchTerm && (
-                        <div className="search-results-info">
-                            Found {filteredExams.length} exam{filteredExams.length !== 1 ? 's' : ''} matching "{searchTerm}"
-                        </div>
+                    {t('tabExams')}
+                </button>
+                <button
+                    className={`nav-tab ${activeTab === 'configs' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('configs')}
+                >
+                    {t('tabConfigs')}
+                    {savedConfigs && savedConfigs.length > 0 && (
+                        <span className="tab-badge">{savedConfigs.length}</span>
                     )}
-                </div>
+                </button>
+                <button
+                    className={`nav-tab ${activeTab === 'reports' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('reports')}
+                >
+                    {t('tabReports')}
+                </button>
+                <button
+                    className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('settings')}
+                >
+                    {t('tabSettings')}
+                </button>
+            </div>
 
-                {/* Controlli */}
-                {filteredExams.length > 0 && (
-                    <div className="exams-controls">
-                        <div className="exams-per-page">
-                            <label>
-                                Show:
-                                <select
-                                    value={examsPerPage}
-                                    onChange={(e) => setExamsPerPage(parseInt(e.target.value))}
+            {/* Tab Content */}
+            <div className="tab-content">
+                {/* TAB: Exams */}
+                {activeTab === 'exams' && (
+                    <div className="available-exams">
+                        {/* Sub-tabs per sorgente */}
+                        <div className="sub-tabs">
+                            <button
+                                className={`sub-tab ${sourceFilter === 'all' ? 'active' : ''}`}
+                                onClick={() => setSourceFilter('all')}
+                            >
+                                {t('subAll')}
+                            </button>
+                            <button
+                                className={`sub-tab ${sourceFilter === 'github' ? 'active' : ''}`}
+                                onClick={() => setSourceFilter('github')}
+                            >
+                                <GitHubIcon /> {t('subGitHub')}
+                            </button>
+                            <button
+                                className={`sub-tab ${sourceFilter === 'local' ? 'active' : ''}`}
+                                onClick={() => setSourceFilter('local')}
+                            >
+                                {t('subLocal')}
+                            </button>
+                        </div>
+
+                        {/* Barra di ricerca */}
+                        <div className="exams-search">
+                            <input
+                                type="text"
+                                placeholder={t('searchExams')}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="search-input"
+                            />
+                            {searchTerm && (
+                                <div className="search-results-info">
+                                    Found {filteredExams.length} exam{filteredExams.length !== 1 ? 's' : ''} matching "{searchTerm}"
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Filtro per categoria */}
+                        <div className="category-filter">
+                            <button
+                                className={`category-btn ${categoryFilter === 'all' ? 'active' : ''}`}
+                                onClick={() => setCategoryFilter('all')}
+                            >
+                                {t('subAll')}
+                            </button>
+                            {getAvailableCategories().map(cat => (
+                                <button
+                                    key={cat}
+                                    className={`category-btn ${categoryFilter === cat ? 'active' : ''}`}
+                                    onClick={() => setCategoryFilter(cat)}
+                                    style={categoryFilter === cat ? { borderColor: EXAM_CATEGORIES[cat].color } : {}}
                                 >
-                                    <option value={6}>6 per page</option>
-                                    <option value={12}>12 per page</option>
-                                    <option value={24}>24 per page</option>
-                                    <option value={filteredExams.length}>All</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div className="exams-pagination-info">
-                            Showing {Math.min((currentPage - 1) * examsPerPage + 1, filteredExams.length)}-{Math.min(currentPage * examsPerPage, filteredExams.length)} of {filteredExams.length} exams
-                        </div>
-                    </div>
-                )}
-
-                {/* Griglia esami */}
-                {loading ? (
-                    <p>🔍 Loading exams...</p>
-                ) : paginatedExams.length > 0 ? (
-                    <>
-                        <div className="exams-grid">
-                            {paginatedExams.map((exam, index) => (
-                                <ExamCard
-                                    key={`${exam.source}-${exam.filename || exam.name}-${index}`}
-                                    exam={exam}
-                                    onSelect={exam.source === 'local' ? handleLocalExamSelect : handleGithubExamSelect}
-                                    onDelete={exam.source === 'local' ? handleDeleteExam : null}
-                                    loading={exam.source === 'github' ? githubLoading : loading}
-                                />
+                                    {EXAM_CATEGORIES[cat].logo ? (
+                                        <img src={EXAM_CATEGORIES[cat].logo} alt={EXAM_CATEGORIES[cat].label} className="category-btn-logo" />
+                                    ) : null}
+                                    {EXAM_CATEGORIES[cat].label}
+                                </button>
                             ))}
                         </div>
 
-                        {/* Paginazione */}
-                        {totalPages > 1 && (
-                            <div className="exams-pagination">
-                                <button
-                                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                                    disabled={currentPage === 1}
-                                    className="pagination-btn"
-                                >
-                                    ⬅️ Previous
-                                </button>
-
-                                <span className="page-info">
-                                    Page {currentPage} of {totalPages}
-                                </span>
-
-                                <button
-                                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="pagination-btn"
-                                >
-                                    Next ➡️
-                                </button>
+                        {/* Controlli */}
+                        {filteredExams.length > 0 && (
+                            <div className="exams-controls">
+                                <div className="exams-per-page">
+                                    <label>
+                                        {t('showLabel')}
+                                        <select
+                                            value={examsPerPage}
+                                            onChange={(e) => setExamsPerPage(parseInt(e.target.value))}
+                                        >
+                                            <option value={6}>6 {t('perPage')}</option>
+                                            <option value={12}>12 {t('perPage')}</option>
+                                            <option value={24}>24 {t('perPage')}</option>
+                                            <option value={filteredExams.length}>{t('subAll')}</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <div className="exams-pagination-info">
+                                    {t('showingExams', Math.min((currentPage - 1) * examsPerPage + 1, filteredExams.length), Math.min(currentPage * examsPerPage, filteredExams.length), filteredExams.length)}
+                                </div>
                             </div>
                         )}
-                    </>
-                ) : (
-                    <div className="no-exams">
-                        {searchTerm ? (
+
+                        {/* Griglia esami */}
+                        {loading ? (
+                            <p>{t('loadingExams')}</p>
+                        ) : paginatedExams.length > 0 ? (
                             <>
-                                <p>🔍 No exams found matching "{searchTerm}"</p>
-                                <p>Try a different search term or clear the search to see all exams.</p>
-                                <button
-                                    onClick={() => setSearchTerm('')}
-                                    className="start-btn"
-                                    style={{ marginTop: '16px' }}
-                                >
-                                    Clear Search
-                                </button>
+                                <div className="exams-grid">
+                                    {paginatedExams.map((exam, index) => (
+                                        <ExamCard
+                                            key={`${exam.source}-${exam.filename || exam.name}-${index}`}
+                                            exam={exam}
+                                            onSelect={exam.source === 'local' ? handleLocalExamSelect : handleGithubExamSelect}
+                                            onDelete={exam.source === 'local' ? handleDeleteExam : null}
+                                            loading={exam.source === 'github' ? githubLoading : loading}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Paginazione */}
+                                {totalPages > 1 && (
+                                    <div className="exams-pagination">
+                                        <button
+                                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                            disabled={currentPage === 1}
+                                            className="pagination-btn"
+                                        >
+                                            ⬅️ {t('previous')}
+                                        </button>
+
+                                        <span className="page-info">
+                                            {t('pageOf', currentPage, totalPages)}
+                                        </span>
+
+                                        <button
+                                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="pagination-btn"
+                                        >
+                                            {t('next')} ➡️
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         ) : (
-                            <>
-                                <p>📭 No exams available.</p>
-                                <p>Upload a JSON file or connect to GitHub to get started.</p>
-                            </>
+                            <div className="no-exams">
+                                {searchTerm ? (
+                                    <>
+                                        <p>{t('noExamsFound', searchTerm)}</p>
+                                        <p>{t('tryDifferentSearch')}</p>
+                                        <button
+                                            onClick={() => setSearchTerm('')}
+                                            className="start-btn"
+                                            style={{ marginTop: '16px' }}
+                                        >
+                                            {t('clearSearch')}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p>{t('noExamsAvailable')}</p>
+                                        <p>{t('uploadOrConnect')}</p>
+                                    </>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}
+
+                {/* TAB: Configurations */}
+                {activeTab === 'configs' && (
+                    <SavedConfigs
+                        configs={savedConfigs}
+                        onLaunch={onLaunchConfig}
+                        onDelete={onDeleteConfig}
+                        onDeleteAll={onDeleteAllConfigs}
+                    />
+                )}
+
+                {/* TAB: Reports */}
+                {activeTab === 'reports' && (
+                    <ReportsList />
+                )}
+
+                {/* TAB: Settings */}
+                {activeTab === 'settings' && (
+                    <div className="settings-tab">
+                        {/* GitHub Authentication */}
+                        <div className="settings-section">
+                            <h3>
+                                <svg height="20" width="20" viewBox="0 0 16 16" style={{ verticalAlign: 'middle', marginRight: '8px', fill: 'currentColor' }}>
+                                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                                </svg>
+                                GitHub Repository
+                                <span className={`status-dot ${githubAuthenticated ? 'online' : 'offline'}`} title={githubAuthenticated ? 'Connected to GitHub Repository' : 'Not connected'}></span>
+                            </h3>
+                            <GitHubAuth
+                                onAuthSuccess={handleGithubAuth}
+                                onExamsLoaded={handleGithubExamsLoaded}
+                            />
+                        </div>
+
+                        {/* Upload Section */}
+                        <div className="settings-section">
+                            <h3>📤 {t('uploadLocalExam')}</h3>
+                            <ExamUploader onFileUpload={handleFileUpload} />
+                        </div>
+                    </div>
+                )}
             </div>
-
-            <SavedConfigs
-                configs={savedConfigs}
-                onLaunch={onLaunchConfig}
-                onDelete={onDeleteConfig}
-            />
-
-            <ReportsList />
         </div>
     );
 };
@@ -317,16 +575,27 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
 // Componente separato per la card dell'esame
 const ExamCard = ({ exam, onSelect, onDelete, loading }) => {
     const info = exam.source === 'local' ? getExamInfo(exam.filename) : null;
+    const category = exam.category || 'other';
+    const categoryInfo = EXAM_CATEGORIES[category] || EXAM_CATEGORIES.other;
 
     return (
         <div className={`exam-card ${exam.source}`}>
             <div className="exam-card-header">
-                <span className="exam-icon">
-                    {exam.source === 'local' ? '💾' : '🐙'}
+                <span className="exam-icon" title={categoryInfo.label}>
+                    {categoryInfo.logo ? (
+                        <img src={categoryInfo.logo} alt={categoryInfo.label} className="provider-logo" />
+                    ) : (
+                        <span className="provider-fallback" style={{ color: categoryInfo.color }}>
+                            {categoryInfo.label.charAt(0)}
+                        </span>
+                    )}
                 </span>
                 <h3>{exam.displayName}</h3>
             </div>
             <div className="exam-card-body">
+                <p className="exam-category-badge" style={{ color: categoryInfo.color }}>
+                    {categoryInfo.label}
+                </p>
                 {exam.source === 'local' && info ? (
                     <>
                         <p>📝 {info.questionCount} questions</p>
@@ -337,7 +606,6 @@ const ExamCard = ({ exam, onSelect, onDelete, loading }) => {
                     <>
                         <p>📦 Size: {(exam.size / 1024).toFixed(1)} KB</p>
                         <p>🔗 From GitHub Repository</p>
-                        <p>📄 SHA: {exam.sha ? exam.sha.substring(0, 7) : 'N/A'}</p>
                     </>
                 )}
             </div>
@@ -347,14 +615,14 @@ const ExamCard = ({ exam, onSelect, onDelete, loading }) => {
                     className="start-btn"
                     disabled={loading}
                 >
-                    {loading ? '⏳ Loading...' : '▶️ Start'}
+                    {loading ? t('loading') : t('start')}
                 </button>
                 {onDelete && (
                     <button
                         onClick={() => onDelete(exam)}
                         className="delete-btn"
                     >
-                        🗑️ Delete
+                        🗑️
                     </button>
                 )}
             </div>
@@ -483,8 +751,8 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
     return (
         <div className="mode-selection">
             <div className="mode-selection-header">
-                <button onClick={onBack} className="back-btn">← Back</button>
-                <h2>Select Mode</h2>
+                <button onClick={onBack} className="back-btn">{t('back')}</button>
+                <h2>{t('selectMode')}</h2>
             </div>
 
             <div className="mode-options">
@@ -495,8 +763,8 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                         checked={mode === 'study'}
                         onChange={(e) => setMode(e.target.value)}
                     />
-                    <span>📖 Study Mode</span>
-                    <small>Navigate freely, show answers, no time limit</small>
+                    <span>{t('studyMode')}</span>
+                    <small>{t('studyModeDesc')}</small>
                 </label>
 
                 <label className={mode === 'exam' ? 'selected' : ''}>
@@ -506,15 +774,15 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                         checked={mode === 'exam'}
                         onChange={(e) => setMode(e.target.value)}
                     />
-                    <span>⏰ Exam Mode</span>
-                    <small>Timed simulation, no answers shown until end</small>
+                    <span>{t('examMode')}</span>
+                    <small>{t('examModeDesc')}</small>
                 </label>
             </div>
 
             <div className="settings">
                 {/* Question Range Selection */}
                 <div className="setting-group">
-                    <h4>📝 Question Range</h4>
+                    <h4>{t('questionRange')}</h4>
 
                     <div className="checkbox-container">
                         <label>
@@ -523,7 +791,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                 checked={settings.useSubset}
                                 onChange={(e) => handleUseSubsetChange(e.target.checked)}
                             />
-                            🎯 Use custom question range
+                            {t('useCustomRange')}
                         </label>
                     </div>
 
@@ -531,7 +799,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                         <div className="range-settings">
                             <div className="range-inputs">
                                 <div className="range-input-group">
-                                    <label htmlFor="startQuestion">Start from question:</label>
+                                    <label htmlFor="startQuestion">{t('startFromQuestion')}</label>
                                     <input
                                         id="startQuestion"
                                         type="number"
@@ -543,11 +811,11 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                         className="range-input"
                                         placeholder="1"
                                     />
-                                    <small>Valid range: 1 to {examData.length}</small>
+                                    <small>{t('validRange', 1, examData.length)}</small>
                                 </div>
 
                                 <div className="range-input-group">
-                                    <label htmlFor="endQuestion">End at question:</label>
+                                    <label htmlFor="endQuestion">{t('endAtQuestion')}</label>
                                     <input
                                         id="endQuestion"
                                         type="number"
@@ -559,26 +827,26 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                         className="range-input"
                                         placeholder={examData.length.toString()}
                                     />
-                                    <small>Valid range: {settings.startFromQuestion} to {examData.length}</small>
+                                    <small>{t('validRange', settings.startFromQuestion, examData.length)}</small>
                                 </div>
                             </div>
 
                             <div className="range-summary">
                                 <div className="summary-box">
                                     <div className="summary-item">
-                                        <span className="summary-label">📊 Selected Range:</span>
+                                        <span className="summary-label">{t('selectedRange')}</span>
                                         <span className="summary-value">
-                                            Questions {settings.startFromQuestion} - {settings.endAtQuestion}
+                                            {settings.startFromQuestion} - {settings.endAtQuestion}
                                         </span>
                                     </div>
                                     <div className="summary-item">
-                                        <span className="summary-label">📈 Available Questions:</span>
-                                        <span className="summary-value">{availableQuestions} questions</span>
+                                        <span className="summary-label">{t('availableQuestions')}</span>
+                                        <span className="summary-value">{availableQuestions} {t('questions')}</span>
                                     </div>
                                     <div className="summary-item">
-                                        <span className="summary-label">📏 Range Size:</span>
+                                        <span className="summary-label">{t('rangeSize')}</span>
                                         <span className="summary-value">
-                                            {((availableQuestions / examData.length) * 100).toFixed(1)}% of total
+                                            {((availableQuestions / examData.length) * 100).toFixed(1)}%
                                         </span>
                                     </div>
                                 </div>
@@ -588,8 +856,8 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                         <div className="range-summary">
                             <div className="summary-box">
                                 <div className="summary-item">
-                                    <span className="summary-label">📊 Using:</span>
-                                    <span className="summary-value">All questions (1 - {examData.length})</span>
+                                    <span className="summary-label">📊</span>
+                                    <span className="summary-value">{t('usingAll', examData.length)}</span>
                                 </div>
                             </div>
                         </div>
@@ -598,10 +866,10 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
 
                 {/* Question Count */}
                 <div className="setting-group">
-                    <h4>🔢 Questions to Practice</h4>
+                    <h4>{t('questionsToPractice')}</h4>
                     <div className="question-count-container">
                         <div className="input-with-info">
-                            <label htmlFor="questionCount">Number of questions:</label>
+                            <label htmlFor="questionCount">{t('numberOfQuestions')}</label>
                             <input
                                 id="questionCount"
                                 type="number"
@@ -613,11 +881,11 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                 className="question-count-input"
                                 placeholder="1"
                             />
-                            <small>Maximum available: {availableQuestions}</small>
+                            <small>{t('maxAvailable', availableQuestions)}</small>
                         </div>
 
                         <div className="quick-select">
-                            <span>Quick select:</span>
+                            <span>{t('quickSelect')}</span>
                             <div className="quick-buttons">
                                 <button
                                     type="button"
@@ -648,7 +916,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                     onClick={() => handleQuestionCountChange(availableQuestions)}
                                     className="quick-btn"
                                 >
-                                    All ({availableQuestions})
+                                    {t('allCount', availableQuestions)}
                                 </button>
                             </div>
                         </div>
@@ -658,10 +926,10 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                 {/* Time Limit (only for exam mode) */}
                 {mode === 'exam' && (
                     <div className="setting-group">
-                        <h4>⏰ Time Limit</h4>
+                        <h4>{t('timeLimit')}</h4>
                         <div className="time-limit-container">
                             <div className="input-with-info">
-                                <label htmlFor="timeLimit">Minutes:</label>
+                                <label htmlFor="timeLimit">{t('minutes')}</label>
                                 <input
                                     id="timeLimit"
                                     type="number"
@@ -675,8 +943,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                     className="time-input"
                                 />
                                 <small>
-                                    Recommended: {Math.ceil(settings.questionCount * 1.5)} minutes
-                                    ({(settings.timeLimit / settings.questionCount).toFixed(1)} min/question)
+                                    {t('recommended', Math.ceil(settings.questionCount * 1.5), (settings.timeLimit / settings.questionCount).toFixed(1))}
                                 </small>
                             </div>
                         </div>
@@ -685,7 +952,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
 
                 {/* Random Order */}
                 <div className="setting-group">
-                    <h4>🔀 Question Order</h4>
+                    <h4>{t('questionOrder')}</h4>
                     <div className="checkbox-container">
                         <label>
                             <input
@@ -696,40 +963,40 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                                     randomOrder: e.target.checked
                                 })}
                             />
-                            🔀 Randomize question and answer order
+                            {t('randomizeOrder')}
                         </label>
-                        <small>Questions will be presented in random order and answers within each question will also be shuffled</small>
+                        <small>{t('randomizeDesc')}</small>
                     </div>
                 </div>
 
                 {/* Preview */}
                 <div className="settings-preview">
-                    <h4>📋 Configuration Preview:</h4>
+                    <h4>{t('configPreview')}</h4>
                     <ul>
                         <li>
-                            <strong>Mode:</strong> {mode === 'study' ? '📖 Study Mode' : '⏰ Exam Mode'}
+                            <strong>{t('modeLabel')}</strong> {mode === 'study' ? t('studyMode') : t('examMode')}
                         </li>
                         <li>
-                            <strong>Question Range:</strong>
+                            <strong>{t('questionRangeLabel')}</strong>
                             {settings.useSubset
                                 ? ` ${settings.startFromQuestion} - ${settings.endAtQuestion}`
-                                : ` 1 - ${examData.length} (all)`
+                                : ` 1 - ${examData.length}`
                             }
                         </li>
                         <li>
-                            <strong>Questions to Practice:</strong> {settings.questionCount} of {availableQuestions} available
+                            <strong>{t('questionsToPracticeLabel')}</strong> {settings.questionCount} {t('ofAvailable')} {availableQuestions} {t('available')}
                         </li>
                         <li>
-                            <strong>Order:</strong> {settings.randomOrder ? '🔀 Random' : '📄 Sequential'}
+                            <strong>{t('orderLabel')}</strong> {settings.randomOrder ? t('random') : t('sequential')}
                         </li>
                         {mode === 'exam' && (
                             <li>
-                                <strong>Time Limit:</strong> ⏰ {settings.timeLimit} minutes
+                                <strong>{t('timeLimitLabel')}</strong> ⏰ {settings.timeLimit} min
                                 <span style={{
                                     color: settings.timeLimit < settings.questionCount * 1.5 ? '#f44336' : '#4caf50',
                                     marginLeft: '8px'
                                 }}>
-                                    ({(settings.timeLimit / settings.questionCount).toFixed(1)} min per question)
+                                    ({(settings.timeLimit / settings.questionCount).toFixed(1)} {t('minPerQuestion')})
                                 </span>
                             </li>
                         )}
@@ -742,18 +1009,26 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                 disabled={!mode}
                 className="start-btn"
             >
-                Start {mode === 'study' ? '📖 Study Session' : '⏰ Exam'}
+                {mode === 'study' ? t('startStudy') : t('startExam')}
             </button>
         </div>
     );
 };
 
 // Componente per le configurazioni salvate
-const SavedConfigs = ({ configs, onLaunch, onDelete }) => {
-    const [expanded, setExpanded] = useState(false);
+const SavedConfigs = ({ configs, onLaunch, onDelete, onDeleteAll }) => {
     const [launching, setLaunching] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
-    if (!configs || configs.length === 0) return null;
+    const filteredConfigs = (configs || []).filter(config => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        return (
+            (config.examName || '').toLowerCase().includes(term) ||
+            (config.examFilename || '').toLowerCase().includes(term) ||
+            (config.mode || '').toLowerCase().includes(term)
+        );
+    });
 
     const handleLaunch = async (config) => {
         setLaunching(config.id);
@@ -796,62 +1071,78 @@ const SavedConfigs = ({ configs, onLaunch, onDelete }) => {
         }
     };
 
+    const handleDeleteAll = () => {
+        if (window.confirm(t('deleteAllConfigsConfirm', configs.length))) {
+            onDeleteAll();
+        }
+    };
+
     const formatDate = (isoString) => {
         return new Date(isoString).toLocaleString();
     };
 
     return (
-        <div className="collapsible-section">
-            <div
-                className="collapsible-header"
-                onClick={() => setExpanded(!expanded)}
-            >
-                <h3>🔄 Saved Configurations ({configs.length})</h3>
-                <span className={`collapse-icon ${expanded ? 'expanded' : ''}`}>
-                    ▼
-                </span>
-            </div>
-            <div className={`collapsible-content ${expanded ? '' : 'collapsed'}`}>
-                <div className="saved-configs-list">
-                    {configs.map((config) => (
-                        <div key={config.id} className="saved-config-card">
-                            <div className="saved-config-info">
-                                <div className="saved-config-title">
-                                    {config.mode === 'study' ? '📖' : '⏰'} {config.examName}
+        <div className="saved-configs-tab">
+            {configs.length > 0 ? (
+                <>
+                    <div className="tab-toolbar">
+                        <input
+                            type="text"
+                            placeholder={t('searchConfigs')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input"
+                        />
+                        <button onClick={handleDeleteAll} className="delete-all-btn">
+                            {t('deleteAll')}
+                        </button>
+                    </div>
+                    <div className="saved-configs-list">
+                        {filteredConfigs.map((config) => (
+                            <div key={config.id} className="saved-config-card">
+                                <div className="saved-config-info">
+                                    <div className="saved-config-title">
+                                        {config.mode === 'study' ? '📖' : '⏰'} {config.examName}
+                                    </div>
+                                    <div className="saved-config-details">
+                                        <span>{config.source === 'github' ? '⚙️ GitHub' : '💾 Local'}</span>
+                                        <span>🎯 {config.mode === 'study' ? 'Study' : 'Exam'}</span>
+                                        <span>📝 {config.settings.questionCount} questions</span>
+                                        {config.settings.useSubset && (
+                                            <span>📊 Range: {config.settings.startFromQuestion}-{config.settings.endAtQuestion}</span>
+                                        )}
+                                        {config.settings.randomOrder && <span>🔀 Random</span>}
+                                        {config.mode === 'exam' && <span>⏱️ {config.settings.timeLimit}min</span>}
+                                    </div>
+                                    <div className="saved-config-date">
+                                        📅 {formatDate(config.createdAt)}
+                                    </div>
                                 </div>
-                                <div className="saved-config-details">
-                                    <span>{config.source === 'github' ? '🐙 GitHub' : '💾 Local'}</span>
-                                    <span>🎯 {config.mode === 'study' ? 'Study' : 'Exam'}</span>
-                                    <span>📝 {config.settings.questionCount} questions</span>
-                                    {config.settings.useSubset && (
-                                        <span>📊 Range: {config.settings.startFromQuestion}-{config.settings.endAtQuestion}</span>
-                                    )}
-                                    {config.settings.randomOrder && <span>🔀 Random</span>}
-                                    {config.mode === 'exam' && <span>⏱️ {config.settings.timeLimit}min</span>}
-                                </div>
-                                <div className="saved-config-date">
-                                    📅 {formatDate(config.createdAt)}
+                                <div className="saved-config-actions">
+                                    <button
+                                        onClick={() => handleLaunch(config)}
+                                        className="start-btn"
+                                        disabled={launching === config.id}
+                                    >
+                                        {launching === config.id ? '⏳...' : t('launch')}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(config.id)}
+                                        className="delete-btn"
+                                    >
+                                        🗑️
+                                    </button>
                                 </div>
                             </div>
-                            <div className="saved-config-actions">
-                                <button
-                                    onClick={() => handleLaunch(config)}
-                                    className="start-btn"
-                                    disabled={launching === config.id}
-                                >
-                                    {launching === config.id ? '⏳...' : '▶️ Launch'}
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(config.id)}
-                                    className="delete-btn"
-                                >
-                                    🗑️
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="no-exams">
+                    <p>{t('noConfigs')}</p>
+                    <p>{t('noConfigsHint')}</p>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Question from './Question';
 import { saveReport } from '../utils/reportUtils';
+import { t } from '../utils/i18n';
 
 const StudyMode = ({ examData, settings, onComplete, onBack }) => {
     const [questions, setQuestions] = useState([]);
@@ -143,15 +144,15 @@ const StudyMode = ({ examData, settings, onComplete, onBack }) => {
     };
 
     if (questions.length === 0) {
-        return <div className="loading">📚 Loading questions...</div>;
+        return <div className="loading">{t('loadingQuestions')}</div>;
     }
 
     return (
         <div className="study-mode">
             <div className="study-header">
-                <button onClick={onBack} className="back-btn">← Back to Home</button>
-                <h2>📖 Study Mode</h2>
-                <button onClick={handleFinish} className="finish-btn">✅ Finish Study</button>
+                <button onClick={onBack} className="back-btn">{t('backToHome')}</button>
+                <h2>{t('studyModeTitle')}</h2>
+                <button onClick={handleFinish} className="finish-btn">{t('finishStudy')}</button>
             </div>
 
             <Question
@@ -170,11 +171,11 @@ const StudyMode = ({ examData, settings, onComplete, onBack }) => {
                     disabled={currentQuestionIndex === 0}
                     className="nav-btn"
                 >
-                    ← Previous
+                    {t('previousArrow')}
                 </button>
 
                 <button onClick={handleShowAnswer} className="show-answer-btn">
-                    {showAnswers ? '🙈 Hide Answer' : '👁️ Show Answer'}
+                    {showAnswers ? t('hideAnswer') : t('showAnswer')}
                 </button>
 
                 <button
@@ -182,7 +183,7 @@ const StudyMode = ({ examData, settings, onComplete, onBack }) => {
                     disabled={currentQuestionIndex === questions.length - 1}
                     className="nav-btn"
                 >
-                    Next →
+                    {t('nextArrow')}
                 </button>
             </div>
 

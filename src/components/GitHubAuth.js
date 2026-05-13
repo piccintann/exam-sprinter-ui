@@ -7,6 +7,7 @@ import {
     testGitHubConnection,
     loadExamsFromGitHub
 } from '../utils/githubUtils';
+import { t } from '../utils/i18n';
 
 const GitHubAuth = ({ onAuthSuccess, onExamsLoaded }) => {
     const [token, setToken] = useState('');
@@ -93,15 +94,6 @@ const GitHubAuth = ({ onAuthSuccess, onExamsLoaded }) => {
             {isAuthenticated ? (
                 // Contenuto quando è connesso
                 <div className="github-connected">
-                    <div className="connection-status">
-                        <div className="status-info">
-                            <span className="status-indicator">🟢</span>
-                            <span className="status-text">Connected to GitHub Repository</span>
-                        </div>
-                        <button onClick={handleDisconnect} className="disconnect-btn">
-                            🔓 Disconnect
-                        </button>
-                    </div>
                     {repoInfo && (
                         <div className="repo-info">
                             <div className="repo-details">
@@ -121,17 +113,20 @@ const GitHubAuth = ({ onAuthSuccess, onExamsLoaded }) => {
                                     <span className="detail-value">{repoInfo.size} KB</span>
                                 </div>
                             </div>
-                            <div className="repo-actions">
-                                <button
-                                    onClick={handleRefreshExams}
-                                    disabled={loading}
-                                    className="refresh-btn"
-                                >
-                                    {loading ? '🔄 Loading...' : '🔄 Refresh Exams'}
-                                </button>
-                            </div>
                         </div>
                     )}
+                    <div className="repo-actions">
+                        <button
+                            onClick={handleRefreshExams}
+                            disabled={loading}
+                            className="refresh-btn"
+                        >
+                            {loading ? t('refreshLoading') : t('refreshExams')}
+                        </button>
+                        <button onClick={handleDisconnect} className="disconnect-btn">
+                            {t('disconnect')}
+                        </button>
+                    </div>
                     {error && (
                         <div className="auth-error">
                             ⚠️ {error}
@@ -168,7 +163,7 @@ const GitHubAuth = ({ onAuthSuccess, onExamsLoaded }) => {
                                 disabled={testing || !token.trim()}
                                 className="auth-btn"
                             >
-                                {testing ? '🔄 Testing Connection...' : '🔗 Connect'}
+                                {testing ? t('testingConnection') : t('connect')}
                             </button>
                         </div>
                     </form>

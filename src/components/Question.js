@@ -1,5 +1,6 @@
 // components/Question.js
 import React, { useState, useEffect } from 'react';
+import { t } from '../utils/i18n';
 
 const Question = ({
     questionData,
@@ -195,7 +196,7 @@ const Question = ({
 
         return (
             <div className="correct-answers-section">
-                <h4>✅ Correct Answer(s):</h4>
+                <h4>{t('correctAnswers')}</h4>
                 <div className="correct-answers-list">
                     {questionData.correct_answers.map((correctAnswer, index) => (
                         <div key={index} className="correct-answer-item">
@@ -220,11 +221,11 @@ const Question = ({
     return (
         <div className="question-container">
             <div className="question-header">
-                <h3>Question {questionIndex + 1} of {totalQuestions}</h3>
+                <h3>{t('questionOf', questionIndex + 1, totalQuestions)}</h3>
                 <div className="question-meta">
-                    <span>📝 Topic {questionData.topic_number}</span>
-                    <span>🔢 Question {questionData.question_number}</span>
-                    {isMultipleChoice && <span>✅ Multiple Answers</span>}
+                    <span>📝 {t('topic')} {questionData.topic_number}</span>
+                    <span>🔢 {t('questionNum')} {questionData.question_number}</span>
+                    {isMultipleChoice && <span>{t('multipleAnswers')}</span>}
                 </div>
             </div>
 
@@ -243,7 +244,7 @@ const Question = ({
                 )}
 
                 <div className="answers-section">
-                    <h4>Select your answer{isMultipleChoice ? 's' : ''}:</h4>
+                    <h4>{isMultipleChoice ? t('selectYourAnswers') : t('selectYourAnswer')}:</h4>
                     {questionData.answers && questionData.answers.map((answer, index) => (
                         <div
                             key={index}

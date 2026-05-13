@@ -91,7 +91,7 @@ export const loadExamsFromGitHub = async (folder = GITHUB_CONFIG.examsFolder) =>
             return [];
         }
 
-        // Filtra solo i file JSON
+        // Separa file JSON e sottocartelle
         const jsonFiles = contents
             .filter(file => file.type === 'file' && file.name.endsWith('.json'))
             .map(file => ({
@@ -99,10 +99,29 @@ export const loadExamsFromGitHub = async (folder = GITHUB_CONFIG.examsFolder) =>
                 size: file.size,
                 sha: file.sha,
                 path: file.path,
-                apiUrl: file.url
+                apiUrl: file.url,
+                folder: folder.replace(GITHUB_CONFIG.examsFolder + '/', '') === folder ? null : folder.replace(GITHUB_CONFIG.examsFolder + '/', '')
             }));
 
-        return jsonFiles;
+        const subfolders = contents.filter(item => item.type === 'dir');
+
+        // Carica ricorsivamente dalle sottocartelle
+        const subfolderResults = await Promise.all(
+            subfolders.map(async (subfolder) => {
+                try {
+                    const subExams = await loadExamsFromGitHub(subfolder.path);
+                    return subExams.map(exam => ({
+                        ...exam,
+                        folder: subfolder.name
+                    }));
+                } catch (error) {
+                    console.warn(`Error loading subfolder ${subfolder.name}:`, error);
+                    return [];
+                }
+            })
+        );
+
+        return [...jsonFiles, ...subfolderResults.flat()];
     } catch (error) {
         console.error('Error loading exams from GitHub:', error);
         throw error;
