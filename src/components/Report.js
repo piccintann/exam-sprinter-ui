@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Report = ({ reportData, onBack }) => {
+const Report = ({ reportData, onBack, onRestart }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [questionsPerPage, setQuestionsPerPage] = useState(5);
     const [filterType, setFilterType] = useState('all'); // all, correct, incorrect, unanswered
@@ -96,6 +96,9 @@ const Report = ({ reportData, onBack }) => {
             <div className="report-header">
                 <button onClick={onBack} className="back-btn">← Back to Home</button>
                 <h2>📊 Exam Report</h2>
+                {onRestart && (
+                    <button onClick={onRestart} className="restart-btn">🔄 Restart Session</button>
+                )}
             </div>
 
             <div className="report-summary">

@@ -5,7 +5,7 @@ import GitHubAuth from './GitHubAuth';
 import { loadAvailableExams, loadExamData, deleteExam, getExamInfo } from '../utils/fileUtils';
 import { loadExamFromGitHub, getGitHubToken } from '../utils/githubUtils';
 
-const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData }) => {
+const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedConfigs, onLaunchConfig, onDeleteConfig }) => {
     const [availableExams, setAvailableExams] = useState([]);
     const [githubExams, setGithubExams] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -39,20 +39,15 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData }) => {
         }
     };
 
-    const handleFileUpload = async (data, filename) => {
-        await loadExams();
-        onExamSelect(filename, data);
-        setShowModeSelection(true);
-        setUploaderSectionExpanded(false); // Chiudi dopo upload
-    };
-
     const handleLocalExamSelect = async (examInfo) => {
         try {
             setLoading(true);
             const filename = typeof examInfo === 'string' ? examInfo : examInfo.filename;
             const data = await loadExamData(filename);
             if (data) {
-                onExamSelect(filename, data);
+                // Passa anche il nome dell'esame per costruire il path delle immagini
+                const examName = filename.replace('.json', '');
+                onExamSelect(filename, data, examName, 'local', null);
                 setShowModeSelection(true);
             } else {
                 alert('Error loading exam file');
@@ -69,7 +64,8 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData }) => {
         try {
             setGithubLoading(true);
             const data = await loadExamFromGitHub(githubExam);
-            onExamSelect(githubExam.name, data);
+            const examName = githubExam.name.replace('.json', '');
+            onExamSelect(githubExam.name, data, examName, 'github', { name: githubExam.name, apiUrl: githubExam.apiUrl, sha: githubExam.sha });
             setShowModeSelection(true);
         } catch (error) {
             console.error('Error loading GitHub exam:', error);
@@ -77,6 +73,14 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData }) => {
         } finally {
             setGithubLoading(false);
         }
+    };
+
+    const handleFileUpload = async (data, filename) => {
+        await loadExams();
+        const examName = filename.replace('.json', '');
+        onExamSelect(filename, data, examName, 'local', null);
+        setShowModeSelection(true);
+        setUploaderSectionExpanded(false);
     };
 
     const handleDeleteExam = async (examInfo) => {
@@ -299,6 +303,12 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData }) => {
                 )}
             </div>
 
+            <SavedConfigs
+                configs={savedConfigs}
+                onLaunch={onLaunchConfig}
+                onDelete={onDeleteConfig}
+            />
+
             <ReportsList />
         </div>
     );
@@ -353,8 +363,12 @@ const ExamCard = ({ exam, onSelect, onDelete, loading }) => {
 };
 
 // Componente ModeSelection (rimane uguale)
+// Nel componente ModeSelection di HomePage.js
+
+// Nel componente ModeSelection di HomePage.js
+
 const ModeSelection = ({ onModeSelect, examData, onBack }) => {
-    const [mode, setMode] = useState('');
+    const [mode, setMode] = useState('study');
     const [settings, setSettings] = useState({
         questionCount: examData?.length || 0,
         timeLimit: 60,
@@ -371,25 +385,90 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
     };
 
     const handleUseSubsetChange = (useSubset) => {
+        if (useSubset) {
+            // Quando attiva il subset, mantieni i valori attuali
+            setSettings(prev => {
+                const availableQuestions = prev.endAtQuestion - prev.startFromQuestion + 1;
+                return {
+                    ...prev,
+                    useSubset: true,
+                    questionCount: Math.min(prev.questionCount, availableQuestions)
+                };
+            });
+        } else {
+            // Quando disattiva il subset, usa tutto l'esame
+            setSettings(prev => ({
+                ...prev,
+                useSubset: false,
+                startFromQuestion: 1,
+                endAtQuestion: examData.length,
+                questionCount: examData.length
+            }));
+        }
+    };
+
+    // Permetti inserimento libero, valida solo su blur
+    const handleStartQuestionChange = (value) => {
+        const parsed = parseInt(value);
+        // Permetti inserimento libero (anche vuoto o parziale)
         setSettings(prev => ({
             ...prev,
-            useSubset,
-            startFromQuestion: useSubset ? 1 : 1,
-            endAtQuestion: useSubset ? Math.min(50, examData.length) : examData.length,
-            questionCount: useSubset ? Math.min(50, examData.length) : examData.length
+            startFromQuestion: isNaN(parsed) ? '' : parsed
         }));
     };
 
-    const handleRangeChange = (start, end) => {
-        const validStart = Math.max(1, Math.min(start, examData.length));
-        const validEnd = Math.max(validStart, Math.min(end, examData.length));
-        const availableQuestions = validEnd - validStart + 1;
+    const handleStartQuestionBlur = () => {
+        setSettings(prev => {
+            const newStart = Math.max(1, Math.min(parseInt(prev.startFromQuestion) || 1, examData.length));
+            const validEnd = Math.max(newStart, parseInt(prev.endAtQuestion) || examData.length);
+            const availableQuestions = validEnd - newStart + 1;
+            return {
+                ...prev,
+                startFromQuestion: newStart,
+                endAtQuestion: validEnd,
+                questionCount: Math.min(parseInt(prev.questionCount) || 1, availableQuestions)
+            };
+        });
+    };
+
+    const handleEndQuestionChange = (value) => {
+        const parsed = parseInt(value);
         setSettings(prev => ({
             ...prev,
-            startFromQuestion: validStart,
-            endAtQuestion: validEnd,
-            questionCount: Math.min(prev.questionCount, availableQuestions)
+            endAtQuestion: isNaN(parsed) ? '' : parsed
         }));
+    };
+
+    const handleEndQuestionBlur = () => {
+        setSettings(prev => {
+            const startVal = parseInt(prev.startFromQuestion) || 1;
+            const newEnd = Math.max(startVal, Math.min(parseInt(prev.endAtQuestion) || examData.length, examData.length));
+            const availableQuestions = newEnd - startVal + 1;
+            return {
+                ...prev,
+                endAtQuestion: newEnd,
+                questionCount: Math.min(parseInt(prev.questionCount) || 1, availableQuestions)
+            };
+        });
+    };
+
+    const handleQuestionCountChange = (value) => {
+        const parsed = parseInt(value);
+        setSettings(prev => ({
+            ...prev,
+            questionCount: isNaN(parsed) ? '' : parsed
+        }));
+    };
+
+    const handleQuestionCountBlur = () => {
+        const availableQuestions = getAvailableQuestions();
+        setSettings(prev => {
+            const validCount = Math.max(1, Math.min(parseInt(prev.questionCount) || 1, availableQuestions));
+            return {
+                ...prev,
+                questionCount: validCount
+            };
+        });
     };
 
     const getAvailableQuestions = () => {
@@ -407,6 +486,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                 <button onClick={onBack} className="back-btn">← Back</button>
                 <h2>Select Mode</h2>
             </div>
+
             <div className="mode-options">
                 <label className={mode === 'study' ? 'selected' : ''}>
                     <input
@@ -418,6 +498,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                     <span>📖 Study Mode</span>
                     <small>Navigate freely, show answers, no time limit</small>
                 </label>
+
                 <label className={mode === 'exam' ? 'selected' : ''}>
                     <input
                         type="radio"
@@ -429,10 +510,12 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                     <small>Timed simulation, no answers shown until end</small>
                 </label>
             </div>
+
             <div className="settings">
                 {/* Question Range Selection */}
                 <div className="setting-group">
                     <h4>📝 Question Range</h4>
+
                     <div className="checkbox-container">
                         <label>
                             <input
@@ -443,129 +526,332 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                             🎯 Use custom question range
                         </label>
                     </div>
-                    {settings.useSubset && (
+
+                    {settings.useSubset ? (
                         <div className="range-settings">
                             <div className="range-inputs">
-                                <div>
-                                    <label>Start from question:</label>
+                                <div className="range-input-group">
+                                    <label htmlFor="startQuestion">Start from question:</label>
                                     <input
+                                        id="startQuestion"
                                         type="number"
                                         min="1"
                                         max={examData.length}
                                         value={settings.startFromQuestion}
-                                        onChange={(e) => handleRangeChange(
-                                            parseInt(e.target.value),
-                                            settings.endAtQuestion
-                                        )}
+                                        onChange={(e) => handleStartQuestionChange(e.target.value)}
+                                        onBlur={handleStartQuestionBlur}
+                                        className="range-input"
+                                        placeholder="1"
                                     />
+                                    <small>Valid range: 1 to {examData.length}</small>
                                 </div>
-                                <div>
-                                    <label>End at question:</label>
+
+                                <div className="range-input-group">
+                                    <label htmlFor="endQuestion">End at question:</label>
                                     <input
+                                        id="endQuestion"
                                         type="number"
                                         min={settings.startFromQuestion}
                                         max={examData.length}
                                         value={settings.endAtQuestion}
-                                        onChange={(e) => handleRangeChange(
-                                            settings.startFromQuestion,
-                                            parseInt(e.target.value)
-                                        )}
+                                        onChange={(e) => handleEndQuestionChange(e.target.value)}
+                                        onBlur={handleEndQuestionBlur}
+                                        className="range-input"
+                                        placeholder={examData.length.toString()}
                                     />
+                                    <small>Valid range: {settings.startFromQuestion} to {examData.length}</small>
                                 </div>
                             </div>
-                            <div className="range-info">
-                                📊 Available questions: <strong>{availableQuestions}</strong>
-                                <br />
-                                📍 Range: Questions {settings.startFromQuestion}-{settings.endAtQuestion}
+
+                            <div className="range-summary">
+                                <div className="summary-box">
+                                    <div className="summary-item">
+                                        <span className="summary-label">📊 Selected Range:</span>
+                                        <span className="summary-value">
+                                            Questions {settings.startFromQuestion} - {settings.endAtQuestion}
+                                        </span>
+                                    </div>
+                                    <div className="summary-item">
+                                        <span className="summary-label">📈 Available Questions:</span>
+                                        <span className="summary-value">{availableQuestions} questions</span>
+                                    </div>
+                                    <div className="summary-item">
+                                        <span className="summary-label">📏 Range Size:</span>
+                                        <span className="summary-value">
+                                            {((availableQuestions / examData.length) * 100).toFixed(1)}% of total
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="range-summary">
+                            <div className="summary-box">
+                                <div className="summary-item">
+                                    <span className="summary-label">📊 Using:</span>
+                                    <span className="summary-value">All questions (1 - {examData.length})</span>
+                                </div>
                             </div>
                         </div>
                     )}
-                    {!settings.useSubset && (
-                        <div className="range-info">
-                            📊 Using all <strong>{examData.length}</strong> questions
-                        </div>
-                    )}
                 </div>
+
                 {/* Question Count */}
-                <div>
-                    <label>Number of questions to practice:</label>
-                    <input
-                        type="number"
-                        min="1"
-                        max={availableQuestions}
-                        value={Math.min(settings.questionCount, availableQuestions)}
-                        onChange={(e) => setSettings({
-                            ...settings,
-                            questionCount: parseInt(e.target.value)
-                        })}
-                    />
-                    <small>Max: {availableQuestions}</small>
+                <div className="setting-group">
+                    <h4>🔢 Questions to Practice</h4>
+                    <div className="question-count-container">
+                        <div className="input-with-info">
+                            <label htmlFor="questionCount">Number of questions:</label>
+                            <input
+                                id="questionCount"
+                                type="number"
+                                min="1"
+                                max={availableQuestions}
+                                value={settings.questionCount}
+                                onChange={(e) => handleQuestionCountChange(e.target.value)}
+                                onBlur={handleQuestionCountBlur}
+                                className="question-count-input"
+                                placeholder="1"
+                            />
+                            <small>Maximum available: {availableQuestions}</small>
+                        </div>
+
+                        <div className="quick-select">
+                            <span>Quick select:</span>
+                            <div className="quick-buttons">
+                                <button
+                                    type="button"
+                                    onClick={() => handleQuestionCountChange(Math.min(10, availableQuestions))}
+                                    className="quick-btn"
+                                    disabled={availableQuestions < 10}
+                                >
+                                    10
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleQuestionCountChange(Math.min(25, availableQuestions))}
+                                    className="quick-btn"
+                                    disabled={availableQuestions < 25}
+                                >
+                                    25
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleQuestionCountChange(Math.min(50, availableQuestions))}
+                                    className="quick-btn"
+                                    disabled={availableQuestions < 50}
+                                >
+                                    50
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleQuestionCountChange(availableQuestions)}
+                                    className="quick-btn"
+                                >
+                                    All ({availableQuestions})
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
                 {/* Time Limit (only for exam mode) */}
                 {mode === 'exam' && (
-                    <div>
-                        <label>Time Limit (minutes):</label>
-                        <input
-                            type="number"
-                            min="1"
-                            value={settings.timeLimit}
-                            onChange={(e) => setSettings({
-                                ...settings,
-                                timeLimit: parseInt(e.target.value)
-                            })}
-                        />
+                    <div className="setting-group">
+                        <h4>⏰ Time Limit</h4>
+                        <div className="time-limit-container">
+                            <div className="input-with-info">
+                                <label htmlFor="timeLimit">Minutes:</label>
+                                <input
+                                    id="timeLimit"
+                                    type="number"
+                                    min="1"
+                                    max="480"
+                                    value={settings.timeLimit}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        timeLimit: Math.max(1, parseInt(e.target.value) || 60)
+                                    })}
+                                    className="time-input"
+                                />
+                                <small>
+                                    Recommended: {Math.ceil(settings.questionCount * 1.5)} minutes
+                                    ({(settings.timeLimit / settings.questionCount).toFixed(1)} min/question)
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 )}
+
                 {/* Random Order */}
-                <div className="checkbox-container">
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={settings.randomOrder}
-                            onChange={(e) => setSettings({
-                                ...settings,
-                                randomOrder: e.target.checked
-                            })}
-                        />
-                        🔀 Random Order
-                    </label>
+                <div className="setting-group">
+                    <h4>🔀 Question Order</h4>
+                    <div className="checkbox-container">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={settings.randomOrder}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    randomOrder: e.target.checked
+                                })}
+                            />
+                            🔀 Randomize question and answer order
+                        </label>
+                        <small>Questions will be presented in random order and answers within each question will also be shuffled</small>
+                    </div>
                 </div>
+
                 {/* Preview */}
                 <div className="settings-preview">
-                    <h4>📋 Preview:</h4>
+                    <h4>📋 Configuration Preview:</h4>
                     <ul>
                         <li>
-                            <strong>Mode:</strong> {mode === 'study' ? '📖 Study' : '⏰ Exam'}
+                            <strong>Mode:</strong> {mode === 'study' ? '📖 Study Mode' : '⏰ Exam Mode'}
                         </li>
-                        {settings.useSubset ? (
-                            <>
-                                <li>
-                                    <strong>Question Range:</strong> {settings.startFromQuestion}-{settings.endAtQuestion}
-                                    ({availableQuestions} available)
-                                </li>
-                                <li>
-                                    <strong>Questions to Practice:</strong> {Math.min(settings.questionCount, availableQuestions)}
-                                </li>
-                            </>
-                        ) : (
-                            <li>
-                                <strong>Questions:</strong> {settings.questionCount} out of {examData.length}
-                            </li>
-                        )}
+                        <li>
+                            <strong>Question Range:</strong>
+                            {settings.useSubset
+                                ? ` ${settings.startFromQuestion} - ${settings.endAtQuestion}`
+                                : ` 1 - ${examData.length} (all)`
+                            }
+                        </li>
+                        <li>
+                            <strong>Questions to Practice:</strong> {settings.questionCount} of {availableQuestions} available
+                        </li>
                         <li>
                             <strong>Order:</strong> {settings.randomOrder ? '🔀 Random' : '📄 Sequential'}
                         </li>
                         {mode === 'exam' && (
                             <li>
                                 <strong>Time Limit:</strong> ⏰ {settings.timeLimit} minutes
+                                <span style={{
+                                    color: settings.timeLimit < settings.questionCount * 1.5 ? '#f44336' : '#4caf50',
+                                    marginLeft: '8px'
+                                }}>
+                                    ({(settings.timeLimit / settings.questionCount).toFixed(1)} min per question)
+                                </span>
                             </li>
                         )}
                     </ul>
                 </div>
             </div>
-            <button onClick={handleSubmit} disabled={!mode} className="start-btn">
-                Start {mode === 'study' ? '📖 Study' : '⏰ Exam'}
+
+            <button
+                onClick={handleSubmit}
+                disabled={!mode}
+                className="start-btn"
+            >
+                Start {mode === 'study' ? '📖 Study Session' : '⏰ Exam'}
             </button>
+        </div>
+    );
+};
+
+// Componente per le configurazioni salvate
+const SavedConfigs = ({ configs, onLaunch, onDelete }) => {
+    const [expanded, setExpanded] = useState(false);
+    const [launching, setLaunching] = useState(null);
+
+    if (!configs || configs.length === 0) return null;
+
+    const handleLaunch = async (config) => {
+        setLaunching(config.id);
+        try {
+            let data;
+
+            if (config.source === 'github' || config.githubInfo) {
+                // Ricarica da GitHub
+                const githubInfo = config.githubInfo || { name: config.examFilename };
+                data = await loadExamFromGitHub(githubInfo);
+            } else {
+                // Prova da localStorage
+                data = await loadExamData(config.examFilename);
+
+                // Fallback: se non trovato in locale, prova da GitHub
+                if (!data) {
+                    try {
+                        data = await loadExamFromGitHub({ name: config.examFilename });
+                    } catch (e) {
+                        // Ignora errore GitHub, mostrerà il messaggio "not found"
+                    }
+                }
+            }
+
+            if (data) {
+                onLaunch(config, data);
+            } else {
+                alert(`Exam "${config.examFilename}" not found. It may have been deleted.`);
+            }
+        } catch (error) {
+            alert('Error loading exam: ' + error.message);
+        } finally {
+            setLaunching(null);
+        }
+    };
+
+    const handleDelete = (configId) => {
+        if (window.confirm('Delete this saved configuration?')) {
+            onDelete(configId);
+        }
+    };
+
+    const formatDate = (isoString) => {
+        return new Date(isoString).toLocaleString();
+    };
+
+    return (
+        <div className="collapsible-section">
+            <div
+                className="collapsible-header"
+                onClick={() => setExpanded(!expanded)}
+            >
+                <h3>🔄 Saved Configurations ({configs.length})</h3>
+                <span className={`collapse-icon ${expanded ? 'expanded' : ''}`}>
+                    ▼
+                </span>
+            </div>
+            <div className={`collapsible-content ${expanded ? '' : 'collapsed'}`}>
+                <div className="saved-configs-list">
+                    {configs.map((config) => (
+                        <div key={config.id} className="saved-config-card">
+                            <div className="saved-config-info">
+                                <div className="saved-config-title">
+                                    {config.mode === 'study' ? '📖' : '⏰'} {config.examName}
+                                </div>
+                                <div className="saved-config-details">
+                                    <span>{config.source === 'github' ? '🐙 GitHub' : '💾 Local'}</span>
+                                    <span>🎯 {config.mode === 'study' ? 'Study' : 'Exam'}</span>
+                                    <span>📝 {config.settings.questionCount} questions</span>
+                                    {config.settings.useSubset && (
+                                        <span>📊 Range: {config.settings.startFromQuestion}-{config.settings.endAtQuestion}</span>
+                                    )}
+                                    {config.settings.randomOrder && <span>🔀 Random</span>}
+                                    {config.mode === 'exam' && <span>⏱️ {config.settings.timeLimit}min</span>}
+                                </div>
+                                <div className="saved-config-date">
+                                    📅 {formatDate(config.createdAt)}
+                                </div>
+                            </div>
+                            <div className="saved-config-actions">
+                                <button
+                                    onClick={() => handleLaunch(config)}
+                                    className="start-btn"
+                                    disabled={launching === config.id}
+                                >
+                                    {launching === config.id ? '⏳...' : '▶️ Launch'}
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(config.id)}
+                                    className="delete-btn"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };

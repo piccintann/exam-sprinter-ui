@@ -27,7 +27,9 @@ const StudyMode = ({ examData, settings, onComplete, onBack }) => {
         // Step 2: Applica ordine random se richiesto
         if (settings.randomOrder) {
             questionsToUse = shuffleArray(questionsToUse);
-            console.log('Questions shuffled randomly');
+            // Randomizza anche l'ordine delle risposte per ogni domanda
+            questionsToUse = questionsToUse.map(q => shuffleAnswers(q));
+            console.log('Questions and answers shuffled randomly');
         }
 
         // Step 3: Limita al numero richiesto
@@ -44,6 +46,29 @@ const StudyMode = ({ examData, settings, onComplete, onBack }) => {
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
+    };
+
+    const shuffleAnswers = (question) => {
+        const indices = question.answers.map((_, i) => i);
+        // Fisher-Yates shuffle sugli indici
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+
+        // Riordina answers, answer_checks, answer_labels e correct_answers
+        const shuffledAnswers = indices.map(i => question.answers[i]);
+        const shuffledChecks = indices.map(i => question.answer_checks[i]);
+        const shuffledLabels = question.answer_labels
+            ? question.answer_labels.map((_, idx) => question.answer_labels[idx])
+            : null;
+
+        return {
+            ...question,
+            answers: shuffledAnswers,
+            answer_checks: shuffledChecks,
+            answer_labels: shuffledLabels
+        };
     };
 
     const handleAnswerChange = (questionIndex, answers) => {

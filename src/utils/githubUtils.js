@@ -5,7 +5,7 @@ const GITHUB_CONFIG = {
     branch: 'master',
     baseURL: 'https://api.github.com/repos',
     examsFolder: 'data/dumps',
-    imagesFolder: 'md/images'
+    imagesFolder: 'data/md/images'
 };
 
 // Memorizza il token in localStorage per persistenza
