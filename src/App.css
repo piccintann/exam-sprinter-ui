@@ -1915,7 +1915,7 @@ body {
 .progress-bar {
     height: 100%;
     background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
-    border-radius: 6px;
+    border-radius: 6px 0 0 6px;
     transition: width 0.8s ease;
     position: relative;
 }
@@ -4051,6 +4051,10 @@ body {
     background: #21222c;
 }
 
+[data-theme="dracula"] .progress-bar {
+    background: linear-gradient(90deg, #bd93f9, #ff79c6);
+}
+
 /* Controls */
 [data-theme="dracula"] .study-controls,
 [data-theme="dracula"] .exam-controls {
@@ -4268,4 +4272,22 @@ body {
 
 [data-theme="dracula"] .optional-tag {
     color: #6272a4;
+}
+
+
+[data-theme="dracula"] .settings-preview {
+    background: rgba(80, 250, 123, 0.1);
+    border-left-color: #50fa7b;
+}
+
+[data-theme="dracula"] .settings-preview h4 {
+    color: #50fa7b;
+}
+
+[data-theme="dracula"] .settings-preview li {
+    color: #f8f8f2;
+}
+
+[data-theme="dracula"] .settings-preview li strong {
+    color: #50fa7b;
 }

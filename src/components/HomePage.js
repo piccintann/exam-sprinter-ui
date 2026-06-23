@@ -95,7 +95,7 @@ const getExamCategory = (examName, folder) => {
     const name = (examName || '').toLowerCase();
     for (const [key, category] of Object.entries(EXAM_CATEGORIES)) {
         if (key === 'other') continue;
-        if (category.keywords.some(kw => name.includes(kw))) {
+        if (category.keywords.some(kw => new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(name))) {
             return key;
         }
     }
@@ -107,6 +107,7 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
     const [githubExams, setGithubExams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [githubLoading, setGithubLoading] = useState(false);
+    const [loadingExamId, setLoadingExamId] = useState(null);
     const [showModeSelection, setShowModeSelection] = useState(false);
     const [githubAuthenticated, setGithubAuthenticated] = useState(false);
 
@@ -180,11 +181,10 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
 
     const handleLocalExamSelect = async (examInfo) => {
         try {
-            setLoading(true);
             const filename = typeof examInfo === 'string' ? examInfo : examInfo.filename;
+            setLoadingExamId(filename);
             const data = await loadExamData(filename);
             if (data) {
-                // Passa anche il nome dell'esame per costruire il path delle immagini
                 const examName = filename.replace('.json', '');
                 onExamSelect(filename, data, examName, 'local', null);
                 setShowModeSelection(true);
@@ -195,13 +195,13 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
             console.error('Error loading local exam:', error);
             alert('Error loading exam file. Please try again.');
         } finally {
-            setLoading(false);
+            setLoadingExamId(null);
         }
     };
 
     const handleGithubExamSelect = async (githubExam) => {
         try {
-            setGithubLoading(true);
+            setLoadingExamId(githubExam.name);
             const data = await loadExamFromGitHub(githubExam);
             const examName = githubExam.name.replace('.json', '');
             onExamSelect(githubExam.name, data, examName, 'github', { name: githubExam.name, apiUrl: githubExam.apiUrl, sha: githubExam.sha });
@@ -210,7 +210,7 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
             console.error('Error loading GitHub exam:', error);
             alert('Failed to load exam from GitHub: ' + error.message);
         } finally {
-            setGithubLoading(false);
+            setLoadingExamId(null);
         }
     };
 
@@ -472,7 +472,7 @@ const HomePage = ({ onExamSelect, onModeSelect, selectedExam, examData, savedCon
                                             exam={exam}
                                             onSelect={exam.source === 'local' ? handleLocalExamSelect : handleGithubExamSelect}
                                             onDelete={exam.source === 'local' ? handleDeleteExam : null}
-                                            loading={exam.source === 'github' ? githubLoading : loading}
+                                            loading={loadingExamId === (exam.filename || exam.name)}
                                         />
                                     ))}
                                 </div>
@@ -641,6 +641,7 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
         questionCount: examData?.length || 0,
         timeLimit: 60,
         randomOrder: false,
+        smartMode: false,
         startFromQuestion: 1,
         endAtQuestion: examData?.length || 0,
         useSubset: false
@@ -966,6 +967,26 @@ const ModeSelection = ({ onModeSelect, examData, onBack }) => {
                             {t('randomizeOrder')}
                         </label>
                         <small>{t('randomizeDesc')}</small>
+                    </div>
+                </div>
+
+                {/* Smart Mode */}
+                <div className="setting-group">
+                    <h4>🧠 Smart Mode</h4>
+                    <div className="checkbox-container">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={settings.smartMode}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    smartMode: e.target.checked,
+                                    randomOrder: e.target.checked ? true : settings.randomOrder
+                                })}
+                            />
+                            🧠 {t('smartMode')}
+                        </label>
+                        <small>{t('smartModeDesc')}</small>
                     </div>
                 </div>
 

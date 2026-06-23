@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Question from './Question';
-import { saveReport } from '../utils/reportUtils';
+import { saveReport, getQuestionErrorStats } from '../utils/reportUtils';
 import { t } from '../utils/i18n';
 
 const ExamMode = ({ examData, settings, onComplete, onBack }) => {
@@ -39,24 +39,56 @@ const ExamMode = ({ examData, settings, onComplete, onBack }) => {
 
         // Step 1: Applica il subset se richiesto
         if (settings.useSubset) {
-            const startIndex = settings.startFromQuestion - 1; // Convert to 0-based index
-            const endIndex = settings.endAtQuestion; // This is inclusive, so no -1
+            const startIndex = settings.startFromQuestion - 1;
+            const endIndex = settings.endAtQuestion;
             questionsToUse = questionsToUse.slice(startIndex, endIndex);
             console.log(`Using subset: questions ${settings.startFromQuestion}-${settings.endAtQuestion} (${questionsToUse.length} questions)`);
         }
 
-        // Step 2: Applica ordine random se richiesto
-        if (settings.randomOrder) {
+        // Step 2: Smart Mode
+        if (settings.smartMode && settings.randomOrder) {
+            const examName = examData[0]?.exam_name || 'Unknown';
+            const errorStats = getQuestionErrorStats(examName);
+
+            if (errorStats) {
+                const scored = questionsToUse.map(q => ({
+                    question: q,
+                    errorRate: errorStats[q.question_number]?.errorRate || 0
+                }));
+
+                const weakQuestions = scored.filter(s => s.errorRate > 0)
+                    .sort((a, b) => b.errorRate - a.errorRate)
+                    .map(s => s.question);
+
+                const otherQuestions = scored.filter(s => s.errorRate === 0)
+                    .map(s => s.question);
+
+                const targetCount = Math.min(settings.questionCount, questionsToUse.length);
+                const weakCount = Math.min(Math.ceil(targetCount * 0.6), weakQuestions.length);
+                const randomCount = targetCount - weakCount;
+
+                const selectedWeak = shuffleArray(weakQuestions).slice(0, weakCount);
+                const selectedRandom = shuffleArray(otherQuestions).slice(0, randomCount);
+
+                questionsToUse = shuffleArray([...selectedWeak, ...selectedRandom]);
+                questionsToUse = questionsToUse.map(q => shuffleAnswers(q));
+                console.log(`Smart mode: ${weakCount} weak + ${randomCount} random = ${questionsToUse.length} questions`);
+            } else {
+                questionsToUse = shuffleArray(questionsToUse);
+                questionsToUse = questionsToUse.slice(0, settings.questionCount);
+                questionsToUse = questionsToUse.map(q => shuffleAnswers(q));
+                console.log('Smart mode: no past reports, using random');
+            }
+        } else if (settings.randomOrder) {
             questionsToUse = shuffleArray(questionsToUse);
-            // Randomizza anche l'ordine delle risposte per ogni domanda
+            questionsToUse = questionsToUse.slice(0, settings.questionCount);
             questionsToUse = questionsToUse.map(q => shuffleAnswers(q));
             console.log('Questions and answers shuffled randomly');
+        } else {
+            questionsToUse = questionsToUse.slice(0, settings.questionCount);
         }
 
-        // Step 3: Limita al numero richiesto
-        questionsToUse = questionsToUse.slice(0, settings.questionCount);
         console.log(`Final question set: ${questionsToUse.length} questions`);
-
         setQuestions(questionsToUse);
     };
 

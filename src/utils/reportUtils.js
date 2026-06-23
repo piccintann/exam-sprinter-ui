@@ -50,6 +50,52 @@ export const deleteAllReports = async () => {
     }
 };
 
+/**
+ * Calcola le statistiche di errore per ogni domanda di un esame specifico.
+ * Ritorna una mappa: questionNumber -> { attempts, errors, errorRate }
+ * Ritorna null se non ci sono report per quell'esame.
+ */
+export const getQuestionErrorStats = (examName) => {
+    const reports = getReports();
+    const examReports = reports.filter(r => r.examName === examName && r.questions && r.userAnswers);
+
+    if (examReports.length === 0) return null;
+
+    const stats = {};
+
+    examReports.forEach(report => {
+        report.questions.forEach((question, index) => {
+            const qNum = question.question_number || index;
+            if (!stats[qNum]) {
+                stats[qNum] = { attempts: 0, errors: 0 };
+            }
+            stats[qNum].attempts++;
+
+            const userAnswer = report.userAnswers[index] || [];
+            if (userAnswer.length > 0) {
+                const correctIndices = question.answer_checks
+                    .map((isCorrect, i) => isCorrect ? i : -1)
+                    .filter(i => i !== -1);
+                const isCorrect = userAnswer.length === correctIndices.length &&
+                    [...userAnswer].sort().toString() === [...correctIndices].sort().toString();
+                if (!isCorrect) {
+                    stats[qNum].errors++;
+                }
+            } else {
+                stats[qNum].errors++;
+            }
+        });
+    });
+
+    Object.keys(stats).forEach(qNum => {
+        stats[qNum].errorRate = stats[qNum].attempts > 0
+            ? stats[qNum].errors / stats[qNum].attempts
+            : 0;
+    });
+
+    return stats;
+};
+
 const saveReportToFile = async (reportData) => {
     try {
         // Questo dovrebbe salvare il report nella cartella exam-reports/
