@@ -1256,6 +1256,38 @@ body {
     font-weight: 500;
 }
 
+.copy-markdown-btn {
+    background: var(--gray-100);
+    border: 1px solid var(--border-color);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: var(--gray-700);
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+}
+
+.copy-markdown-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.copy-markdown-btn:active {
+    transform: translateY(0);
+}
+
+.copy-markdown-btn.copied {
+    background: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
 .question-text {
     font-size: 20px;
     line-height: 1.7;

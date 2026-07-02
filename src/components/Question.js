@@ -14,10 +14,12 @@ const Question = ({
     const [selectedAnswers, setSelectedAnswers] = useState(userAnswers[questionIndex] || []);
     const [imageCache, setImageCache] = useState({});
     const [imageErrors, setImageErrors] = useState({});
+    const [copied, setCopied] = useState(false);
 
     // Aggiorna selected answers quando cambia la domanda
     useEffect(() => {
         setSelectedAnswers(userAnswers[questionIndex] || []);
+        setCopied(false);
     }, [questionIndex, userAnswers]);
 
     const handleAnswerToggle = (answerIndex) => {
@@ -216,6 +218,85 @@ const Question = ({
         );
     };
 
+    const handleCopyMarkdown = () => {
+        let markdown = '';
+
+        // Topic and Question Number
+        if (questionData.topic_number || questionData.question_number) {
+            markdown += `### Topic ${questionData.topic_number || ''} - Question ${questionData.question_number || ''}\n\n`;
+        }
+
+        // Question text
+        markdown += `${questionData.question}\n\n`;
+
+        // If there are images, list them/URLs
+        if (questionData.images && questionData.images.length > 0) {
+            questionData.images.forEach((img, idx) => {
+                const url = buildImageUrl(img);
+                if (url) {
+                    markdown += `![Question Image ${idx + 1}](${url})\n\n`;
+                } else {
+                    const imgName = typeof img === 'object' ? img.image_name : img;
+                    markdown += `*[Image: ${imgName}]*\n\n`;
+                }
+            });
+        }
+
+        // Answers
+        if (questionData.answers && questionData.answers.length > 0) {
+            markdown += `**Options:**\n`;
+            questionData.answers.forEach((answer, index) => {
+                const label = questionData.answer_labels && questionData.answer_labels[index]
+                    ? questionData.answer_labels[index]
+                    : String.fromCharCode(65 + index);
+
+                let answerText = '';
+                if (typeof answer === 'string') {
+                    answerText = answer;
+                } else if (typeof answer === 'object' && answer.origin_url) {
+                    answerText = `![Answer Image ${label}](${answer.origin_url})`;
+                } else if (Array.isArray(answer)) {
+                    answerText = answer.map((item, itemIndex) => {
+                        if (typeof item === 'string') {
+                            return item;
+                        } else if (typeof item === 'object' && item.origin_url) {
+                            return `![Answer Image ${label}_${itemIndex + 1}](${item.origin_url})`;
+                        }
+                        return '';
+                    }).join(' ');
+                }
+
+                markdown += `- **${label}**: ${answerText}\n`;
+            });
+            markdown += `\n`;
+        }
+
+        // Correct Answer(s) if available
+        const correctLabels = [];
+        if (questionData.answer_checks && Array.isArray(questionData.answer_checks)) {
+            questionData.answer_checks.forEach((isCorrect, idx) => {
+                if (isCorrect) {
+                    const label = questionData.answer_labels && questionData.answer_labels[idx]
+                        ? questionData.answer_labels[idx]
+                        : String.fromCharCode(65 + idx);
+                    correctLabels.push(label);
+                }
+            });
+        }
+        if (correctLabels.length > 0) {
+            markdown += `**Correct Answer:** ${correctLabels.join(', ')}\n`;
+        }
+
+        navigator.clipboard.writeText(markdown.trim())
+            .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+    };
+
     const isMultipleChoice = questionData.answer_checks.filter(Boolean).length > 1;
 
     return (
@@ -226,6 +307,12 @@ const Question = ({
                     <span>📝 {t('topic')} {questionData.topic_number}</span>
                     <span>🔢 {t('questionNum')} {questionData.question_number}</span>
                     {isMultipleChoice && <span>{t('multipleAnswers')}</span>}
+                    <button
+                        className={`copy-markdown-btn ${copied ? 'copied' : ''}`}
+                        onClick={handleCopyMarkdown}
+                    >
+                        {copied ? '✅ ' + t('copied') : '📋 ' + t('copyMarkdown')}
+                    </button>
                 </div>
             </div>
 
