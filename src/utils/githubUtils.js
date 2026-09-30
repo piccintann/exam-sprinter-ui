@@ -142,12 +142,32 @@ export const loadExamFromGitHub = async (examFile) => {
         }
 
         const fileData = await response.json();
-        if (!fileData.content) {
+
+        let content;
+        if (fileData.content && fileData.encoding === 'base64') {
+            // File piccolo (<1MB): contenuto inline in base64
+            content = atob(fileData.content.replace(/\s/g, ''));
+        } else if (fileData.sha) {
+            // File grande (>1MB): la Contents API non include il contenuto.
+            // Usiamo la Git Blobs API (stesso dominio api.github.com, niente
+            // token temporaneo/CORS di raw.githubusercontent.com, niente limite 1MB).
+            const blobUrl = `${GITHUB_CONFIG.baseURL}/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/git/blobs/${fileData.sha}`;
+            const blobResponse = await fetch(blobUrl, { headers: getAuthHeaders() });
+            if (!blobResponse.ok) {
+                throw new Error(`Failed to load blob: ${blobResponse.status} ${blobResponse.statusText}`);
+            }
+            const blobData = await blobResponse.json();
+            if (!blobData.content || blobData.encoding !== 'base64') {
+                throw new Error('No content found in blob');
+            }
+            // Il base64 di GitHub è UTF-8: decodifica byte-safe per caratteri non ASCII.
+            const binary = atob(blobData.content.replace(/\s/g, ''));
+            const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+            content = new TextDecoder('utf-8').decode(bytes);
+        } else {
             throw new Error('No content found in file');
         }
 
-        // Decodifica il contenuto base64
-        const content = atob(fileData.content.replace(/\s/g, ''));
         const examData = JSON.parse(content);
 
         if (!Array.isArray(examData)) {
