@@ -144,6 +144,8 @@ const translations = {
         highlyVotedAnswers: '👥 Highly Voted Community Answers:',
         mostRecentAnswers: '🆕 Most Recent Community Answers:',
         imageNotAvailable: '🖼️ Image not available',
+        copyMarkdown: 'Copy Markdown',
+        copied: 'Copied!',
 
         // Configurations
         noConfigs: '📭 No saved configurations yet.',
@@ -328,6 +330,8 @@ const translations = {
         highlyVotedAnswers: '👥 Risposte Più Votate dalla Community:',
         mostRecentAnswers: '🆕 Risposte Più Recenti dalla Community:',
         imageNotAvailable: '🖼️ Immagine non disponibile',
+        copyMarkdown: 'Copia Markdown',
+        copied: 'Copiato!',
 
         // Configurations
         noConfigs: '📭 Nessuna configurazione salvata.',
